@@ -42,6 +42,7 @@ the offline dataset is the default — the demo can never fail in front of a cli
 |---|---|
 | **Command Centre** | Open jobs, in transit, held at port, revenue, duty paid, unbilled work. Duty-advance alert banner at the top. |
 | **Customs Clearance** | Job registry from the BL / AWB. Average clearance time, total charges, pure duty split out. |
+| **New job from a document** | Drop a Bill of Lading, Air Waybill or Commercial Invoice in — PDF or photo — and the job fields fill themselves. Every field carries a confidence score; anything uncertain is flagged amber for the operator to check before saving. |
 | **Job file** | Auto-extracted shipment fields, split-wise duty with a Bayan cross-check, PO/invoice refs, expenses, per-job P&L, documents, the job history timeline, and the **batch chain** linking clearance → warehouse → transport → installation. |
 | **Duty Advances** | Per-client float balances with the threshold alert. GE HealthCare is deliberately overdrawn; Siemens is below threshold. This is the miss Ameer described. |
 | **Transport** | Route, crew, distance, and the **allowance slab calculation** — overtime under 300 km, trip allowance beyond. Photo and signature proof indicators. |
@@ -51,6 +52,38 @@ the offline dataset is the default — the demo can never fail in front of a cli
 | **Client Status Board** | The read-only view for Siemens. Same data as the registry, grouped by stage — replaces the Monday.com sheet. |
 | **Reports** | Job profitability with unbilled flags, service-line margins, monthly revenue vs cost, receivables, asset utilisation. |
 | **Settings** | Allowance slabs, alert thresholds, extraction/GPS/scanning/SAP configuration. |
+
+## Document intake
+
+`/clearance/new` is the screen that replaces manual job entry. Drop a shipping
+document in and the fields are read off it; the operator verifies and saves.
+
+Two reading engines, chosen automatically:
+
+| | When it runs | What it handles |
+|---|---|---|
+| **AI extraction** | `ANTHROPIC_API_KEY` is set | Anything — scans, photos, unfamiliar layouts, non-English forms. Returns a per-field confidence score and is instructed to return null rather than guess. |
+| **Label parser** | No key set, PDF has a text layer | Standard freight vocabulary (B/L No, Port of Discharge, Gross Weight, …). Reads the file for real; can't read scans or images. |
+
+Set the key on Vercel to enable the AI path:
+
+| Name | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | your key from console.anthropic.com |
+| `ANTHROPIC_MODEL` | optional, defaults to `claude-sonnet-5` |
+
+Four synthetic documents ship in `public/samples/` so the flow can be demoed
+without touching client paperwork — a sea BL, an air waybill, a commercial
+invoice, and a photographed BL with no text layer (that last one deliberately
+fails on the label parser and needs the AI path, which is a useful thing to show).
+
+**Saving.** A verified job is written to Postgres — job row, PO lines, the source
+document, and the first job-history entry — but only when
+`NEXT_PUBLIC_DATA_SOURCE=supabase`. On the bundled dataset the screen confirms
+the verification without writing, so a new job can never appear to save and then
+vanish. Insert policies live in `supabase/migrations/0004_intake_write_policies.sql`
+and are demo-grade: they let the publishable key insert clearance jobs. Replace
+them with authenticated-role policies before this goes anywhere near production.
 
 ## Deliberate demo moments
 
@@ -67,8 +100,7 @@ the offline dataset is the default — the demo can never fail in front of a cli
 
 The driver mobile app (photo capture, e-signature, GPS) is represented here by
 its outputs only — photo counts, the signature on the delivery note, and the
-distance figures. Document auto-extraction is shown as a completed state rather
-than a live upload. Both are Phase 1 build items.
+distance figures. That is the remaining Phase 1 build item.
 
 ## Stack
 

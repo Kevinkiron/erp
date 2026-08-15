@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Tag } from '@/components/ui'
 import { sar, num, day } from '@/lib/format'
-import { Plane, Ship } from 'lucide-react'
+import { Plane, Ship, Upload } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +36,14 @@ export default async function Clearance() {
       <PageHead
         title="Customs Clearance"
         sub="Job registry built from the Bill of Lading / Air Waybill and the commercial invoice."
+        right={
+          <Link
+            href="/clearance/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-700"
+          >
+            <Upload className="h-4 w-4" /> New job from a document
+          </Link>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
