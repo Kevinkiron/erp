@@ -1,0 +1,114 @@
+# Al Fahad Logistics ERP — working demo
+
+A Next.js + Supabase demo of the ERP discussed with Ameer: **customs clearance →
+warehousing → transport → installation**, all hanging off a single job spine
+threaded by batch number.
+
+Everything is dummy data modelled on the client's actual operation — Siemens
+Healthineers medical equipment, Saudi hospitals, Riyadh / Jeddah / Dammam,
+SAR duty amounts, real-looking BL and AWB references.
+
+## Run it
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
+
+That's it. The demo ships with a complete bundled dataset (`lib/seed/`), so
+it runs offline with no database, no keys and no setup — useful when you're
+presenting from a hotel wifi.
+
+### Running against the live Postgres instead
+
+A Supabase project is already provisioned and seeded with the same data.
+
+```bash
+cp .env.example .env.local
+sed -i '' 's/DATA_SOURCE=local/DATA_SOURCE=supabase/' .env.local   # or edit by hand
+npm run dev
+```
+
+Supabase project ref: `kkkkdwficvcbjhcbvlpc` (region eu-central-1).
+Schema lives in `supabase/migrations/` — three migrations: core schema,
+operations schema, views + row-level security.
+
+Note: free-tier Supabase projects pause after a week of inactivity. That is why
+the offline dataset is the default — the demo can never fail in front of a client.
+
+## What's in it
+
+| Screen | What it demonstrates |
+|---|---|
+| **Command Centre** | Open jobs, in transit, held at port, revenue, duty paid, unbilled work. Duty-advance alert banner at the top. |
+| **Customs Clearance** | Job registry from the BL / AWB. Average clearance time, total charges, pure duty split out. |
+| **Job file** | Auto-extracted shipment fields, split-wise duty with a Bayan cross-check, PO/invoice refs, expenses, per-job P&L, documents, the job history timeline, and the **batch chain** linking clearance → warehouse → transport → installation. |
+| **Duty Advances** | Per-client float balances with the threshold alert. GE HealthCare is deliberately overdrawn; Siemens is below threshold. This is the miss Ameer described. |
+| **Transport** | Route, crew, distance, and the **allowance slab calculation** — overtime under 300 km, trip allowance beyond. Photo and signature proof indicators. |
+| **Warehouse** | Batch-tracked stock on hand, occupancy by site, barcode/pallet movement log, storage contracts on three different quotation bases. |
+| **Delivery Notes** | Printable DN with line items and a captured signature. |
+| **Fleet & Crew** | Truck utilisation (4 trucks idle), hired-vs-own split, driver performance, labour roster hours — the buy-or-hire report. |
+| **Client Status Board** | The read-only view for Siemens. Same data as the registry, grouped by stage — replaces the Monday.com sheet. |
+| **Reports** | Job profitability with unbilled flags, service-line margins, monthly revenue vs cost, receivables, asset utilisation. |
+| **Settings** | Allowance slabs, alert thresholds, extraction/GPS/scanning/SAP configuration. |
+
+## Deliberate demo moments
+
+- **AFL/CC/26/0470** is held at Jeddah on an SFDA HS-code query, with demurrage
+  accruing and the whole story in the job history.
+- **GE HealthCare** duty float is overdrawn, and job **AFL/CC/26/0466** shows the
+  payment blocked as a result.
+- **AFL/TR/26/0389** is the 1,320 km Dammam → Abha run: two drivers rotated, four
+  outsourced labourers, cross-country allowance slab applied automatically.
+- **AFL/CC/26/0412** is a complete MRI lifecycle — clearance, warehouse,
+  transport, installation — all on batch `BN-SIE-2026-0431`.
+
+## Not in this demo
+
+The driver mobile app (photo capture, e-signature, GPS) is represented here by
+its outputs only — photo counts, the signature on the delivery note, and the
+distance figures. Document auto-extraction is shown as a completed state rather
+than a live upload. Both are Phase 1 build items.
+
+## Stack
+
+Next.js 15 (App Router, server components) · TypeScript · Tailwind v4 ·
+Supabase (Postgres + RLS) · lucide-react. No client-side state library and no
+chart dependency — the charts are plain SVG/CSS.
+
+## Deploying to Vercel
+
+The Next.js app is at the repository root, so Vercel needs no configuration —
+framework, build command and output directory are all detected automatically.
+
+**Option A — GitHub (recommended, gives you preview URLs on every push)**
+
+```bash
+git init && git add -A && git commit -m "Al Fahad Logistics ERP demo"
+gh repo create alfahad-erp --private --source=. --push     # or push to a repo you made in the UI
+```
+
+Then at vercel.com → **Add New → Project** → import the repo → **Deploy**.
+Leave every setting at its default. First build takes about two minutes.
+
+**Option B — straight from your machine, no GitHub**
+
+```bash
+npm i -g vercel
+vercel login
+vercel          # preview deployment
+vercel --prod   # production URL
+```
+
+**Environment variables:** none are required. The demo runs on its bundled
+dataset by default. To point the deployment at the live Supabase instead, add
+these three under Project → Settings → Environment Variables and redeploy:
+
+| Name | Value |
+|---|---|
+| `NEXT_PUBLIC_DATA_SOURCE` | `supabase` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://kkkkdwficvcbjhcbvlpc.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_Ig7G6G0a5eq1BfCG2qSsdA_EiXuLgNH` |
+
+Every page is server-rendered on demand (`force-dynamic`), so it runs on
+Vercel's Node runtime with no caching surprises during a live demo.
