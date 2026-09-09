@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { getPnl, getDutyBalances, DUTY_ALERT_THRESHOLD } from '@/lib/db'
-import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Bar, Empty } from '@/components/ui'
+import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Empty } from '@/components/ui'
+import { Pipeline } from '@/components/charts/basic'
 import { sar, num, day, stamp, JOB_TYPE_LABEL } from '@/lib/format'
 import { AlertTriangle, ArrowRight, Truck, PackageSearch } from 'lucide-react'
 
@@ -43,7 +44,12 @@ export default async function Dashboard() {
     open: open.filter((j) => j.job_type === s.key).length,
     total: all.filter((j) => j.job_type === s.key).length,
   }))
-  const maxStage = Math.max(...stages.map((s) => s.total), 1)
+  const pipeline = stages.map((s) => ({
+    stage: s.label,
+    open: s.open,
+    total: s.total,
+    label: `${s.open} open / ${s.total}`,
+  }))
 
   return (
     <>
@@ -97,24 +103,8 @@ export default async function Dashboard() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-1">
-          <CardHead title="Job pipeline" sub="Open vs. total by service line" />
-          <div className="space-y-4 p-5">
-            {stages.map((s) => (
-              <div key={s.key}>
-                <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                  <span className="text-slate-700">{s.label}</span>
-                  <span className="tabular text-slate-500">
-                    <strong className="text-slate-900">{s.open}</strong> open / {s.total}
-                  </span>
-                </div>
-                <Bar value={s.total} max={maxStage} tone={s.open > 0 ? 'brand' : 'slate'} />
-              </div>
-            ))}
-            <div className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
-              A consignment keeps the same <strong>batch number</strong> as it moves from clearance to warehouse to
-              transport to installation — so one search returns the whole chain.
-            </div>
-          </div>
+          <CardHead title="Job pipeline" sub="Jobs per stage, in the order they flow" />
+          <Pipeline data={pipeline} />
         </Card>
 
         <Card className="xl:col-span-2">

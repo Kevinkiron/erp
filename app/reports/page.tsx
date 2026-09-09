@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { getPnl } from '@/lib/db'
-import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Tag, Bar } from '@/components/ui'
+import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Tag } from '@/components/ui'
+import { RevenueVsCost, ServiceLineBars } from '@/components/charts/basic'
 import { sar, num, day, JOB_TYPE_LABEL } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,6 @@ export default async function Reports() {
     const exp = rows.reduce((s, p) => s + Number(p.expense_sar), 0)
     return { key: k, label: JOB_TYPE_LABEL[k], jobs: rows.length, rev, exp, net: rev - exp, margin: rev > 0 ? ((rev - exp) / rev) * 100 : 0 }
   }).filter((l) => l.jobs > 0)
-  const maxRev = Math.max(...lines.map((l) => l.rev), 1)
 
   // monthly trend
   const months = MONTHS.map((m) => {
@@ -39,7 +39,6 @@ export default async function Reports() {
     const exp = rows.reduce((s, p) => s + Number(p.expense_sar), 0)
     return { m, label: new Date(`${m}-01`).toLocaleDateString('en-GB', { month: 'short' }), rev, exp, net: rev - exp }
   })
-  const maxMonth = Math.max(...months.map((x) => x.rev), 1)
 
   return (
     <>
@@ -54,47 +53,13 @@ export default async function Reports() {
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHead title="Performance by service line" />
-          <div className="space-y-4 p-5">
-            {lines.map((l) => (
-              <div key={l.key}>
-                <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                  <span className="text-slate-700">
-                    {l.label} <span className="text-xs text-slate-400">· {l.jobs} jobs</span>
-                  </span>
-                  <span className="tabular text-slate-500">
-                    <span className="font-medium text-slate-900">{sar(l.rev, { compact: true })}</span> rev ·{' '}
-                    <span className={l.net >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{sar(l.net, { compact: true })}</span> net ·{' '}
-                    {l.margin.toFixed(0)}%
-                  </span>
-                </div>
-                <Bar value={l.rev} max={maxRev} tone={l.margin > 30 ? 'brand' : 'amber'} />
-              </div>
-            ))}
-          </div>
-        </Card>
+        <ServiceLineBars
+          data={lines.map((l) => ({ line: l.label, jobs: l.jobs, revenue: l.rev, cost: l.exp, net: l.net, margin: l.margin }))}
+        />
 
-        <Card>
-          <CardHead title="Monthly revenue vs. cost" sub="Jobs grouped by the month they were opened" />
-          <div className="p-5">
-            <div className="flex h-48 items-end gap-4">
-              {months.map((m) => (
-                <div key={m.m} className="flex flex-1 flex-col items-center gap-1.5">
-                  <div className="flex h-40 w-full items-end justify-center gap-1">
-                    <div className="w-1/2 rounded-t bg-teal-500" style={{ height: `${Math.max((m.rev / maxMonth) * 100, 1)}%` }} title={`Revenue ${sar(m.rev)}`} />
-                    <div className="w-1/2 rounded-t bg-slate-300" style={{ height: `${Math.max((m.exp / maxMonth) * 100, 1)}%` }} title={`Cost ${sar(m.exp)}`} />
-                  </div>
-                  <div className="text-[11px] text-slate-500">{m.label}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center gap-4 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-teal-500" /> Revenue</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-slate-300" /> Direct cost</span>
-            </div>
-          </div>
-        </Card>
+        <RevenueVsCost
+          data={months.map((m) => ({ month: m.label, Revenue: m.rev, 'Direct cost': m.exp }))}
+        />
       </div>
 
       <Card className="mt-6">

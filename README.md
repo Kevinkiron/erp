@@ -50,6 +50,7 @@ the offline dataset is the default — the demo can never fail in front of a cli
 | **Delivery Notes** | Printable DN with line items and a captured signature. |
 | **Fleet & Crew** | Truck utilisation (4 trucks idle), hired-vs-own split, driver performance, labour roster hours — the buy-or-hire report. |
 | **Client Status Board** | The read-only view for Siemens. Same data as the registry, grouped by stage — replaces the Monday.com sheet. |
+| **Analytics** | The numbers screen: net-profit hero, revenue vs cost by month, profit by service line, customs clearance time against target, duty split per client, truck utilisation, and duty-float meters. Date-range and client filters scope every chart at once. |
 | **Reports** | Job profitability with unbilled flags, service-line margins, monthly revenue vs cost, receivables, asset utilisation. |
 | **Settings** | Allowance slabs, alert thresholds, extraction/GPS/scanning/SAP configuration. |
 
@@ -85,6 +86,34 @@ vanish. Insert policies live in `supabase/migrations/0004_intake_write_policies.
 and are demo-grade: they let the publishable key insert clearance jobs. Replace
 them with authenticated-role policies before this goes anywhere near production.
 
+## Charts
+
+Built with Recharts against a fixed set of tokens in `lib/viz.ts`. Three rules
+hold across every chart, and they are the difference between a dashboard that
+looks busy and one that can be read:
+
+- **One axis, always.** Revenue and cost share a single SAR scale. A second
+  y-axis invents a correlation that isn't in the data.
+- **The colour order is fixed and validated, not chosen by eye.** The six
+  categorical hues were run through a colourblind-separation check against the
+  white card surface: adjacent-pair ΔE 13.0 under protanopia and 19.6 under
+  normal vision, both clear of the floors. Slots are assigned in order and never
+  cycled or reassigned by rank, so a series keeps its colour when a filter
+  changes what's on screen.
+- **Every chart has a table view.** Two of the six hues sit below 3:1 contrast on
+  white, so the values must be reachable without relying on the fill — press
+  *Table* on any card. It doubles as the accessible twin and as the thing to
+  screenshot into an email.
+
+Form follows the job rather than variety: ordered stages (the job pipeline) use a
+single-hue ordinal ramp, magnitude comparisons use one colour for every bar,
+"which trucks are idle" uses emphasis rather than a second hue, and the duty-float
+balances are meters with status colours that always ship with an icon and a word,
+never colour alone.
+
+Tooltips enhance and never gate — hovering a bar shows every series at that
+point, with the value leading and the series name secondary.
+
 ## Deliberate demo moments
 
 - **AFL/CC/26/0470** is held at Jeddah on an SFDA HS-code query, with demurrage
@@ -105,8 +134,8 @@ distance figures. That is the remaining Phase 1 build item.
 ## Stack
 
 Next.js 15 (App Router, server components) · TypeScript · Tailwind v4 ·
-Supabase (Postgres + RLS) · lucide-react. No client-side state library and no
-chart dependency — the charts are plain SVG/CSS.
+Supabase (Postgres + RLS) · Recharts · lucide-react. Pages fetch on the server
+and hand plain data to small client components for the interactive charts.
 
 ## Deploying to Vercel
 

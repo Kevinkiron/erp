@@ -5,4 +5,7 @@ out
 *.tsbuildinfo
 next-env.d.ts
 
+# transfer + screenshot artefacts, not source
 _to_delete/
+Claude outputs/
+*.zip

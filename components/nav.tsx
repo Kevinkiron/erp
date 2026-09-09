@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileCheck2, Truck, Warehouse, Wrench, Wallet,
-  ClipboardSignature, MonitorDot, BarChart3, Settings, Users, Ship,
+  ClipboardSignature, MonitorDot, BarChart3, Settings, Users, Ship, LineChart,
 } from 'lucide-react'
 
 const NAV = [
@@ -17,6 +17,7 @@ const NAV = [
     { href: '/delivery-notes', label: 'Delivery Notes', icon: ClipboardSignature },
   ]},
   { section: 'Finance', items: [
+    { href: '/analytics', label: 'Analytics', icon: LineChart },
     { href: '/duty', label: 'Duty Advances', icon: Wallet },
     { href: '/reports', label: 'Reports', icon: BarChart3 },
   ]},
