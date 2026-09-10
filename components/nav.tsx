@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileCheck2, Truck, Warehouse, Wrench, Wallet,
   ClipboardSignature, MonitorDot, BarChart3, Settings, Users, Ship, LineChart,
+  Landmark, ReceiptText, BookOpen, Library, Banknote, FileSpreadsheet, Coins,
 } from 'lucide-react'
 
 const NAV = [
@@ -16,7 +17,17 @@ const NAV = [
     { href: '/installation', label: 'Installation', icon: Wrench },
     { href: '/delivery-notes', label: 'Delivery Notes', icon: ClipboardSignature },
   ]},
-  { section: 'Finance', items: [
+  { section: 'Accounts', items: [
+    { href: '/finance', label: 'Finance', icon: Landmark },
+    { href: '/finance/invoices', label: 'Sales Documents', icon: ReceiptText },
+    { href: '/finance/bills', label: 'Purchase Bills', icon: FileSpreadsheet },
+    { href: '/finance/claims', label: 'Expense Claims', icon: Coins },
+    { href: '/finance/journal', label: 'General Journal', icon: BookOpen },
+    { href: '/finance/accounts', label: 'Chart of Accounts', icon: Library },
+    { href: '/finance/bank', label: 'Bank Reconciliation', icon: Banknote },
+    { href: '/finance/vat', label: 'VAT Return', icon: Wallet },
+  ]},
+  { section: 'Insight', items: [
     { href: '/analytics', label: 'Analytics', icon: LineChart },
     { href: '/duty', label: 'Duty Advances', icon: Wallet },
     { href: '/reports', label: 'Reports', icon: BarChart3 },
