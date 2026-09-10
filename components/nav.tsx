@@ -37,7 +37,7 @@ export default function Nav() {
           <Ship className="h-[18px] w-[18px] text-teal-300" />
         </div>
         <div className="leading-tight">
-          <div className="text-[13px] font-semibold text-white">Al Fahad Logistics</div>
+          <div className="text-[13px] font-semibold text-white">Logistica</div>
           <div className="text-[10px] uppercase tracking-widest text-teal-300/80">ERP Suite</div>
         </div>
       </div>

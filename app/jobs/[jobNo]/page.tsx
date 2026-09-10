@@ -177,7 +177,7 @@ export default async function JobDetail({ params }: { params: Promise<{ jobNo: s
                 <Field label="Distance" value={<span className="tabular font-semibold">{num(transport.distance_km)} km</span>} />
                 <Field label="Picked up" value={stamp(transport.pickup_at)} />
                 <Field label="Delivered" value={stamp(transport.delivered_at)} />
-                <Field label="Forklift needed at site" value={transport.requires_forklift ? 'Yes — Al Fahad supplies' : 'No'} />
+                <Field label="Forklift needed at site" value={transport.requires_forklift ? 'Yes — Logistica supplies' : 'No'} />
                 <Field label="Photos uploaded" value={`${transport.loading_photos} loading · ${transport.delivery_photos} delivery`} />
                 <div className="col-span-2">
                   <Field

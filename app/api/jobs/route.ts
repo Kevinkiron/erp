@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ persisted: false, error: `Unknown client code "${body.client_code}".` }, { status: 400 })
   }
 
-  // Next job number in the AFL/CC/<yy>/#### series.
+  // Next job number in the LGT/CC/<yy>/#### series.
   const yy = String(new Date().getFullYear()).slice(2)
-  const prefix = `AFL/CC/${yy}/`
+  const prefix = `LGT/CC/${yy}/`
   const { data: latest } = await db
     .from('jobs')
     .select('job_no')

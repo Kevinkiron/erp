@@ -31,7 +31,7 @@ export default async function DeliveryNote({ params }: { params: Promise<{ dnNo:
         <Card>
           <div className="flex items-start justify-between border-b border-slate-100 px-8 py-6">
             <div>
-              <div className="text-lg font-semibold text-slate-900">Al Fahad Logistics &amp; Clearing Est.</div>
+              <div className="text-lg font-semibold text-slate-900">Logistica Clearing &amp; Forwarding Est.</div>
               <div className="mt-0.5 text-xs text-slate-500">Al Sulay Industrial Area, Riyadh · CR 1010XXXXXX · VAT 3XXXXXXXXXXXX3</div>
             </div>
             <div className="text-right">

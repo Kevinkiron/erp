@@ -60,7 +60,7 @@ export default async function WarehousePage() {
                   <div className="text-sm font-semibold text-slate-900">{w.name}</div>
                   <div className="text-xs text-slate-500">{w.city} · {w.code}</div>
                 </div>
-                <Tag tone={w.operated_by?.startsWith('Al Fahad') ? 'brand' : 'amber'}>{w.operated_by}</Tag>
+                <Tag tone={w.operated_by?.startsWith('Logistica') ? 'brand' : 'amber'}>{w.operated_by}</Tag>
               </div>
               <div className="mt-4 mb-1.5 flex items-baseline justify-between text-xs">
                 <span className="text-slate-500">Occupancy</span>

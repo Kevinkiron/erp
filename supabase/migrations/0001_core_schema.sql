@@ -1,5 +1,5 @@
 -- =========================================================
--- Al Fahad Logistics ERP - core schema
+-- Logistica ERP - core schema
 -- Job spine: customs clearance -> warehousing -> transport -> installation
 -- Consignments are threaded across job types by batch_no (Siemens SOP)
 -- =========================================================
@@ -47,7 +47,7 @@ create table warehouses (
   name      text not null,
   city      text,
   capacity_pallets int,
-  operated_by text default 'Al Fahad'
+  operated_by text default 'Logistica'
 );
 
 create table trucks (

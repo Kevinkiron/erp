@@ -1,4 +1,4 @@
-# Al Fahad Logistics ERP — working demo
+# Logistica ERP — working demo
 
 A Next.js + Supabase demo of the ERP discussed with Ameer: **customs clearance →
 warehousing → transport → installation**, all hanging off a single job spine
@@ -116,13 +116,13 @@ point, with the value leading and the series name secondary.
 
 ## Deliberate demo moments
 
-- **AFL/CC/26/0470** is held at Jeddah on an SFDA HS-code query, with demurrage
+- **LGT/CC/26/0470** is held at Jeddah on an SFDA HS-code query, with demurrage
   accruing and the whole story in the job history.
-- **GE HealthCare** duty float is overdrawn, and job **AFL/CC/26/0466** shows the
+- **GE HealthCare** duty float is overdrawn, and job **LGT/CC/26/0466** shows the
   payment blocked as a result.
-- **AFL/TR/26/0389** is the 1,320 km Dammam → Abha run: two drivers rotated, four
+- **LGT/TR/26/0389** is the 1,320 km Dammam → Abha run: two drivers rotated, four
   outsourced labourers, cross-country allowance slab applied automatically.
-- **AFL/CC/26/0412** is a complete MRI lifecycle — clearance, warehouse,
+- **LGT/CC/26/0412** is a complete MRI lifecycle — clearance, warehouse,
   transport, installation — all on batch `BN-SIE-2026-0431`.
 
 ## Not in this demo
@@ -145,8 +145,8 @@ framework, build command and output directory are all detected automatically.
 **Option A — GitHub (recommended, gives you preview URLs on every push)**
 
 ```bash
-git init && git add -A && git commit -m "Al Fahad Logistics ERP demo"
-gh repo create alfahad-erp --private --source=. --push     # or push to a repo you made in the UI
+git init && git add -A && git commit -m "Logistica ERP demo"
+gh repo create logistica-erp --private --source=. --push     # or push to a repo you made in the UI
 ```
 
 Then at vercel.com → **Add New → Project** → import the repo → **Deploy**.

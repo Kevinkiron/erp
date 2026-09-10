@@ -3,7 +3,7 @@ import './globals.css'
 import Nav from '@/components/nav'
 
 export const metadata: Metadata = {
-  title: 'Al Fahad Logistics ERP',
+  title: 'Logistica ERP',
   description: 'Customs clearance, warehousing, transport and installation — one job spine.',
 }
 
@@ -21,9 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-slate-700">Saturday, 15 August 2026</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="hidden text-xs text-slate-500 sm:inline">Ameer Babu · Managing Director</span>
+                <span className="hidden text-xs text-slate-500 sm:inline">Ameer · Managing Director</span>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
-                  AB
+                  A
                 </div>
               </div>
             </div>
