@@ -6,12 +6,12 @@ import { accounts, taxCodes } from '@/lib/finance'
 export const dynamic = 'force-dynamic'
 
 const GROUPS = [
-  { key: 'asset', label: 'Assets', ar: 'الأصول' },
-  { key: 'liability', label: 'Liabilities', ar: 'الالتزامات' },
-  { key: 'equity', label: 'Equity', ar: 'حقوق الملكية' },
-  { key: 'revenue', label: 'Revenue', ar: 'الإيرادات' },
-  { key: 'cost', label: 'Direct costs', ar: 'التكاليف المباشرة' },
-  { key: 'expense', label: 'Operating expenses', ar: 'المصروفات التشغيلية' },
+  { key: 'asset', label: 'Assets' },
+  { key: 'liability', label: 'Liabilities' },
+  { key: 'equity', label: 'Equity' },
+  { key: 'revenue', label: 'Revenue' },
+  { key: 'cost', label: 'Direct costs' },
+  { key: 'expense', label: 'Operating expenses' },
 ]
 
 export default function Accounts() {
@@ -23,7 +23,7 @@ export default function Accounts() {
     <>
       <PageHead
         title="Chart of Accounts"
-        sub="Bilingual, and structured backwards from the outputs — the 16 VAT return lines, the Zakat base, and withholding tax."
+        sub="Structured backwards from the outputs — the 16 VAT return lines, the Zakat base, and withholding tax."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -35,21 +35,20 @@ export default function Accounts() {
 
       <Card className="mt-6">
         <CardHead title="Trial balance" sub="Derived from every posted document — nothing here is entered by hand" />
-        <Table head={['Code', 'Account', 'الحساب', 'Type', 'VAT box', 'Debit', 'Credit', 'Balance']}>
+        <Table head={['Code', 'Account', 'Type', 'VAT box', 'Debit', 'Credit', 'Balance']}>
           {GROUPS.flatMap((g) => {
             const rows = tb.filter((a) => a.type === g.key)
             if (!rows.length) return []
             return [
               <Row key={`h-${g.key}`} className="bg-slate-50/80">
                 <Cell className="font-semibold text-slate-800">{g.label}</Cell>
-                <Cell /><Cell className="text-right text-slate-500" ><span dir="rtl">{g.ar}</span></Cell>
+                <Cell />
                 <Cell /><Cell /><Cell /><Cell /><Cell />
               </Row>,
               ...rows.map((a) => (
                 <Row key={a.code}>
                   <Cell className="tabular text-xs text-slate-500">{a.code}</Cell>
                   <Cell>{a.name_en}</Cell>
-                  <Cell className="text-slate-500" ><span dir="rtl">{a.name_ar}</span></Cell>
                   <Cell className="text-xs text-slate-400">{a.type}</Cell>
                   <Cell>{a.vat_box ? <Tag tone="brand">box {a.vat_box}</Tag> : <span className="text-slate-300">—</span>}</Cell>
                   <Cell className="tabular">{a.debit ? num(a.debit, 2) : ''}</Cell>
@@ -61,7 +60,7 @@ export default function Accounts() {
           })}
           <Row className="bg-slate-50 font-semibold">
             <Cell className="text-slate-900">Total</Cell>
-            <Cell /><Cell /><Cell /><Cell />
+            <Cell /><Cell /><Cell />
             <Cell className="tabular text-slate-900">{num(totalDebit, 2)}</Cell>
             <Cell className="tabular text-slate-900">{num(totalCredit, 2)}</Cell>
             <Cell className="tabular text-slate-900">{num(totalDebit - totalCredit, 2)}</Cell>

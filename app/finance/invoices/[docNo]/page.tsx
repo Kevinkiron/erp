@@ -11,10 +11,10 @@ import { ArrowLeft, ShieldCheck, AlertTriangle, Link2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const TITLE: Record<string, { en: string; ar: string; code: string }> = {
-  invoice: { en: 'Tax Invoice', ar: 'فاتورة ضريبية', code: DOC_TYPE.invoice },
-  credit_note: { en: 'Tax Credit Note', ar: 'إشعار دائن ضريبي', code: DOC_TYPE.credit_note },
-  debit_note: { en: 'Tax Debit Note', ar: 'إشعار مدين ضريبي', code: DOC_TYPE.debit_note },
+const TITLE: Record<string, { en: string; code: string }> = {
+  invoice: { en: 'Tax Invoice', code: DOC_TYPE.invoice },
+  credit_note: { en: 'Tax Credit Note', code: DOC_TYPE.credit_note },
+  debit_note: { en: 'Tax Debit Note', code: DOC_TYPE.debit_note },
 }
 
 export default async function InvoiceDetail({ params }: { params: Promise<{ docNo: string }> }) {
@@ -41,7 +41,6 @@ export default async function InvoiceDetail({ params }: { params: Promise<{ docN
             <div className="flex items-start justify-between gap-6 border-b border-slate-100 px-8 py-6">
               <div>
                 <div className="text-lg font-semibold text-slate-900">{COMPANY.legal_name_en}</div>
-                <div dir="rtl" className="text-base text-slate-800">{COMPANY.legal_name_ar}</div>
                 <div className="mt-2 text-xs leading-relaxed text-slate-500">
                   {COMPANY.address_en}<br />
                   <span className="tabular">CR {COMPANY.cr_no} · VAT {COMPANY.vat_no}</span>
@@ -49,7 +48,6 @@ export default async function InvoiceDetail({ params }: { params: Promise<{ docN
               </div>
               <div className="text-right">
                 <div className="text-[11px] uppercase tracking-widest text-slate-400">{t.en}</div>
-                <div dir="rtl" className="text-sm font-semibold text-slate-700">{t.ar}</div>
                 <div className="tabular mt-1 text-lg font-semibold text-slate-900">{d.doc_no}</div>
                 <div className="mt-1.5"><ZatcaPill status={d.clearance} /></div>
               </div>
@@ -57,35 +55,33 @@ export default async function InvoiceDetail({ params }: { params: Promise<{ docN
 
             <dl className="grid grid-cols-2 gap-x-8 gap-y-5 px-8 py-6 md:grid-cols-3">
               <div className="col-span-2">
-                <Field label="Buyer / المشتري" value={<>{d.client_name}<br /><span className="tabular text-xs text-slate-500">{d.buyer_vat_no ? `VAT ${d.buyer_vat_no}` : 'Not VAT registered'}</span></>} />
+                <Field label="Buyer" value={<>{d.client_name}<br /><span className="tabular text-xs text-slate-500">{d.buyer_vat_no ? `VAT ${d.buyer_vat_no}` : 'Not VAT registered'}</span></>} />
               </div>
-              <Field label="Date of issue / تاريخ الإصدار" value={day(d.issue_date)} />
-              <Field label="Date of supply / تاريخ التوريد" value={day(d.supply_date)} />
+              <Field label="Date of issue" value={day(d.issue_date)} />
+              <Field label="Date of supply" value={day(d.supply_date)} />
               <Field label="Invoice type code" value={<span className="tabular">{t.code} · {typeName}</span>} />
               {d.job_no && (
                 <Field label="Job reference" value={<Link href={`/jobs/${encodeURIComponent(d.job_no)}`} className="tabular text-teal-700 hover:underline">{d.job_no}</Link>} />
               )}
               {d.original_doc_no && (
-                <Field label="Original invoice / الفاتورة الأصلية" value={<span className="tabular">{d.original_doc_no}</span>} />
+                <Field label="Original invoice" value={<span className="tabular">{d.original_doc_no}</span>} />
               )}
             </dl>
 
-            {(d.reason_en || d.reason_ar) && (
+            {d.reason_en && (
               <div className="border-t border-slate-100 px-8 py-4">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Reason for issue / سبب الإصدار</div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Reason for issue</div>
                 <p className="mt-1 text-sm text-slate-700">{d.reason_en}</p>
-                <p dir="rtl" className="text-sm text-slate-600">{d.reason_ar}</p>
               </div>
             )}
 
             <div className="border-t border-slate-100">
-              <Table head={['#', 'Description / الوصف', 'Qty', 'Unit price', 'Rate', 'VAT', 'Line total']}>
+              <Table head={['#', 'Description', 'Qty', 'Unit price', 'Rate', 'VAT', 'Line total']}>
                 {d.lines_c.map((l, i) => (
                   <Row key={i}>
                     <Cell className="text-slate-400">{i + 1}</Cell>
                     <Cell className="max-w-[300px]">
                       <span className="block truncate font-medium text-slate-800">{l.desc_en}</span>
-                      <span dir="rtl" className="block truncate text-xs text-slate-500">{l.desc_ar}</span>
                       {l.vat_rate === 0 && (
                         <span className="mt-1 inline-block text-[10px] text-slate-400">
                           {EXEMPTION_REASON[l.tax_code === 'OOS' ? 'out_of_scope' : 'intl_transport']?.code} ·{' '}
@@ -110,7 +106,6 @@ export default async function InvoiceDetail({ params }: { params: Promise<{ docN
                 <div className="flex justify-between border-t border-slate-200 pt-1.5 text-base font-semibold">
                   <dt>Total including VAT</dt><dd className="tabular">{sar(d.total)}</dd>
                 </div>
-                <div dir="rtl" className="pt-1 text-xs text-slate-500">الإجمالي شامل ضريبة القيمة المضافة</div>
               </dl>
             </div>
           </Card>

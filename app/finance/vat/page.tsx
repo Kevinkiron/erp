@@ -16,9 +16,9 @@ export default function VatReturn() {
     (s, d) => s + d.sign * d.lines_c.filter((l) => l.tax_code === 'OOS').reduce((x, l) => x + l.net, 0), 0)
 
   const groups = [
-    { key: 'output', label: 'Sales and all other outputs', ar: 'المبيعات والمخرجات الأخرى' },
-    { key: 'input', label: 'Purchases and all other inputs', ar: 'المشتريات والمدخلات الأخرى' },
-    { key: 'net', label: 'Net tax due', ar: 'صافي الضريبة المستحقة' },
+    { key: 'output', label: 'Sales and all other outputs' },
+    { key: 'input', label: 'Purchases and all other inputs' },
+    { key: 'net', label: 'Net tax due' },
   ]
 
   return (
@@ -41,12 +41,11 @@ export default function VatReturn() {
           sub="Every figure traces to posted documents. Nothing on this page is typed in."
           right={<span className="tabular text-xs text-slate-400">TIN {COMPANY.vat_no}</span>}
         />
-        <Table head={['Box', 'Description', 'الوصف', 'Amount (SAR)', 'VAT (SAR)']}>
+        <Table head={['Box', 'Description', 'Amount (SAR)', 'VAT (SAR)']}>
           {groups.flatMap((grp) => [
             <Row key={`h-${grp.key}`} className="bg-slate-50/80">
               <Cell />
               <Cell className="font-semibold text-slate-800">{grp.label}</Cell>
-              <Cell className="text-right text-slate-500"><span dir="rtl">{grp.ar}</span></Cell>
               <Cell /><Cell />
             </Row>,
             ...VAT_RETURN_LINES.filter((l) => l.group === grp.key).map((l) => {
@@ -56,7 +55,6 @@ export default function VatReturn() {
                 <Row key={l.box} className={isTotal ? 'bg-slate-50/60 font-semibold' : ''}>
                   <Cell className="tabular text-xs text-slate-400">{l.box}</Cell>
                   <Cell className={isTotal ? 'text-slate-900' : ''}>{l.label}</Cell>
-                  <Cell className="text-right text-slate-500"><span dir="rtl">{l.ar}</span></Cell>
                   <Cell className="tabular">{l.group === 'net' ? '' : num(v.amount, 2)}</Cell>
                   <Cell className="tabular">{num(v.vat, 2)}</Cell>
                 </Row>

@@ -50,11 +50,11 @@ export const VAT_CATEGORY_LABEL: Record<VatCategory, string> = {
 }
 
 /** Exemption reason codes must accompany anything not standard-rated. */
-export const EXEMPTION_REASON: Record<string, { code: string; en: string; ar: string }> = {
-  export_of_goods: { code: 'VATEX-SA-32', en: 'Export of goods outside the GCC', ar: 'تصدير السلع خارج دول المجلس' },
-  intl_transport: { code: 'VATEX-SA-33', en: 'International transport of goods', ar: 'النقل الدولي للسلع' },
-  intl_transport_svc: { code: 'VATEX-SA-34-1', en: 'Services related to international transport', ar: 'الخدمات المرتبطة بالنقل الدولي' },
-  out_of_scope: { code: 'VATEX-SA-OOS', en: 'Outside the scope of tax — disbursement', ar: 'خارج نطاق الضريبة — مبلغ مدفوع نيابة عن العميل' },
+export const EXEMPTION_REASON: Record<string, { code: string; en: string }> = {
+  export_of_goods: { code: 'VATEX-SA-32', en: 'Export of goods outside the GCC' },
+  intl_transport: { code: 'VATEX-SA-33', en: 'International transport of goods' },
+  intl_transport_svc: { code: 'VATEX-SA-34-1', en: 'Services related to international transport' },
+  out_of_scope: { code: 'VATEX-SA-OOS', en: 'Outside the scope of tax — disbursement' },
 }
 
 /* ------------------------------------------------------------------ *
@@ -154,20 +154,20 @@ export const lineVat = (net: number, rate: number) => Math.round(net * rate) / 1
  * ------------------------------------------------------------------ */
 
 export const VAT_RETURN_LINES = [
-  { box: 1, group: 'output', label: 'Standard-rated sales', ar: 'المبيعات الخاضعة للنسبة الأساسية' },
-  { box: 2, group: 'output', label: 'Private healthcare / education / first house to citizens', ar: 'الرعاية الصحية والتعليم الخاص' },
-  { box: 3, group: 'output', label: 'Zero-rated domestic sales', ar: 'المبيعات المحلية الخاضعة لنسبة الصفر' },
-  { box: 4, group: 'output', label: 'Exports', ar: 'الصادرات' },
-  { box: 5, group: 'output', label: 'Exempt sales', ar: 'المبيعات المعفاة' },
-  { box: 6, group: 'output', label: 'Total sales', ar: 'إجمالي المبيعات', total: true },
-  { box: 7, group: 'input', label: 'Standard-rated domestic purchases', ar: 'المشتريات المحلية الخاضعة للضريبة' },
-  { box: 8, group: 'input', label: 'Imports — VAT paid at customs', ar: 'الواردات — ضريبة مدفوعة بالجمارك' },
-  { box: 9, group: 'input', label: 'Imports — VAT under reverse charge', ar: 'الواردات — آلية الاحتساب العكسي' },
-  { box: 10, group: 'input', label: 'Zero-rated purchases', ar: 'المشتريات الخاضعة لنسبة الصفر' },
-  { box: 11, group: 'input', label: 'Exempt purchases', ar: 'المشتريات المعفاة' },
-  { box: 12, group: 'input', label: 'Total purchases', ar: 'إجمالي المشتريات', total: true },
-  { box: 13, group: 'net', label: 'Total VAT due for the period', ar: 'إجمالي الضريبة المستحقة' },
-  { box: 14, group: 'net', label: 'Corrections from previous period (within SAR 5,000)', ar: 'تصحيحات من فترة سابقة' },
-  { box: 15, group: 'net', label: 'VAT credit carried forward', ar: 'رصيد ضريبي مرحل' },
-  { box: 16, group: 'net', label: 'Net VAT due', ar: 'صافي الضريبة المستحقة', total: true },
+  { box: 1, group: 'output', label: 'Standard-rated sales' },
+  { box: 2, group: 'output', label: 'Private healthcare / education / first house to citizens' },
+  { box: 3, group: 'output', label: 'Zero-rated domestic sales' },
+  { box: 4, group: 'output', label: 'Exports' },
+  { box: 5, group: 'output', label: 'Exempt sales' },
+  { box: 6, group: 'output', label: 'Total sales', total: true },
+  { box: 7, group: 'input', label: 'Standard-rated domestic purchases' },
+  { box: 8, group: 'input', label: 'Imports — VAT paid at customs' },
+  { box: 9, group: 'input', label: 'Imports — VAT under reverse charge' },
+  { box: 10, group: 'input', label: 'Zero-rated purchases' },
+  { box: 11, group: 'input', label: 'Exempt purchases' },
+  { box: 12, group: 'input', label: 'Total purchases', total: true },
+  { box: 13, group: 'net', label: 'Total VAT due for the period' },
+  { box: 14, group: 'net', label: 'Corrections from previous period (within SAR 5,000)' },
+  { box: 15, group: 'net', label: 'VAT credit carried forward' },
+  { box: 16, group: 'net', label: 'Net VAT due', total: true },
 ] as const
