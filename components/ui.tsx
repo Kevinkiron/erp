@@ -110,8 +110,14 @@ export function Table({ head, children }: { head: (string | ReactNode)[]; childr
   )
 }
 
-export function Row({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <tr className={`hover:bg-slate-50/70 ${className}`}>{children}</tr>
+export function Row({
+  children, className = '', onClick,
+}: { children: ReactNode; className?: string; onClick?: () => void }) {
+  return (
+    <tr className={`hover:bg-slate-50/70 ${className}`} onClick={onClick}>
+      {children}
+    </tr>
+  )
 }
 
 export function Cell({ children, className = '' }: { children?: ReactNode; className?: string }) {
