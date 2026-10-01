@@ -5,7 +5,7 @@ import { Card, CardHead, PageHead, Stat, Table, Row, Cell, Tag, Field } from '@/
 import { num, sar, day } from '@/lib/format'
 import { postings, ageing, banks, tb } from '@/lib/finance-data'
 import { accounts, COMPANY } from '@/lib/finance'
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Search, Plus, List } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Search, Plus, List, MoreVertical, Pencil, GitBranch, History, Snowflake, Archive, X } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +60,14 @@ export default function ErpNextPreview() {
         </div>
       </Card>
 
-      {tab === 'coa' && <ChartOfAccounts />}
+      {tab === 'coa' && (
+        <ChartOfAccounts
+          onViewHistory={(code) => {
+            setGlAccount(code)
+            setTab('gl')
+          }}
+        />
+      )}
       {tab === 'gl' && <GeneralLedger account={glAccount} onAccount={setGlAccount} />}
       {tab === 'je' && <JournalEntries selected={selectedJv} onSelect={setSelectedJv} />}
       {tab === 'ar' && <AccountsReceivable />}
@@ -118,11 +125,158 @@ const COA_TREE: Record<string, { label: string; groups: CoaGroup[] }> = {
 
 const balanceOfAcc = (code: string) => tb.find((a) => a.code === code)?.balance ?? 0
 
-function ChartOfAccounts() {
+type Acc = (typeof accounts)[number]
+
+function AccountModal({
+  mode, rootKey, groupLabel, account, onClose, onSave,
+}: {
+  mode: 'add' | 'edit' | 'child'
+  rootKey: string
+  groupLabel: string
+  account?: Acc
+  onClose: () => void
+  onSave: (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: string; opening: number }) => void
+}) {
+  const [code, setCode] = useState(mode === 'edit' ? account?.code ?? '' : '')
+  const [nameEn, setNameEn] = useState(mode === 'edit' ? account?.name_en ?? '' : '')
+  const [nameAr, setNameAr] = useState(mode === 'edit' ? account?.name_ar ?? '' : '')
+  const [type, setType] = useState(mode === 'edit' ? account?.type ?? rootKey : rootKey)
+  const [group, setGroup] = useState(groupLabel)
+  const [vatBox, setVatBox] = useState(mode === 'edit' ? account?.vat_box ?? '' : '')
+  const [opening, setOpening] = useState('0')
+  const [error, setError] = useState('')
+
+  const groupsForType = COA_TREE[type]?.groups ?? []
+  const title = mode === 'add' ? 'New account' : mode === 'child' ? `Add child account — under ${account?.name_en}` : `Edit account — ${account?.code}`
+
+  const submit = () => {
+    if (mode !== 'edit' && !/^\d{4}$/.test(code)) { setError('Account code must be 4 digits, matching the existing numbering (e.g. 1160).'); return }
+    if (!nameEn.trim()) { setError('Account name is required.'); return }
+    onSave({ code, name_en: nameEn.trim(), name_ar: nameAr.trim(), type, group, vat_box: vatBox.trim() || undefined, opening: Number(opening) || 0 })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h3 className="text-[15px] font-semibold text-slate-900">{title}</h3>
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-50 hover:text-slate-600"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="space-y-3.5 px-5 py-4">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">Account code</span>
+              <input value={code} onChange={(e) => setCode(e.target.value)} disabled={mode === 'edit'} placeholder="e.g. 1160"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-400" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">VAT box (optional)</span>
+              <input value={vatBox} onChange={(e) => setVatBox(e.target.value)} placeholder="e.g. 7"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+            </label>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Account name (English)</span>
+            <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="e.g. Allowance for warranty claims"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Account name (Arabic)</span>
+            <input value={nameAr} onChange={(e) => setNameAr(e.target.value)} dir="rtl" placeholder="الاسم بالعربية"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">Root type</span>
+              <select value={type} onChange={(e) => { setType(e.target.value); setGroup(COA_TREE[e.target.value]?.groups[0]?.label ?? '') }} disabled={mode !== 'add'}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-400">
+                {Object.entries(COA_TREE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">Sub-ledger group</span>
+              <select value={group} onChange={(e) => setGroup(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800">
+                {groupsForType.map((g) => <option key={g.label} value={g.label}>{g.label}</option>)}
+              </select>
+            </label>
+          </div>
+          {mode !== 'edit' && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">Opening balance (SAR)</span>
+              <input value={opening} onChange={(e) => setOpening(e.target.value)} type="number" placeholder="0.00"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm tabular text-slate-800" />
+            </label>
+          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <p className="text-xs text-slate-400">Preview only — saved for this session so you can see how it reads in the tree; it isn't written back to the ledger file.</p>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3.5">
+          <button onClick={onClose} className="rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button onClick={submit} className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700">
+            {mode === 'edit' ? 'Save changes' : 'Create account'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AccountActionsMenu({
+  frozen, deprecated, onEdit, onAddChild, onViewHistory, onToggleFreeze, onToggleDeprecate,
+}: {
+  frozen: boolean
+  deprecated: boolean
+  onEdit: () => void
+  onAddChild: () => void
+  onViewHistory: () => void
+  onToggleFreeze: () => void
+  onToggleDeprecate: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button onClick={() => setOpen((v) => !v)} className="rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-600">
+        <MoreVertical className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-6 z-20 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-[13px] shadow-lg">
+            <button onClick={() => { setOpen(false); onEdit() }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit</button>
+            <button onClick={() => { setOpen(false); onAddChild() }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50"><GitBranch className="h-3.5 w-3.5 text-slate-400" /> Add child</button>
+            <button onClick={() => { setOpen(false); onViewHistory() }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50"><History className="h-3.5 w-3.5 text-slate-400" /> View history</button>
+            <div className="my-1 border-t border-slate-100" />
+            <button onClick={() => { setOpen(false); onToggleFreeze() }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-red-600 hover:bg-red-50"><Snowflake className="h-3.5 w-3.5" /> {frozen ? 'Unfreeze' : 'Freeze'}</button>
+            <button onClick={() => { setOpen(false); onToggleDeprecate() }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-red-600 hover:bg-red-50"><Archive className="h-3.5 w-3.5" /> {deprecated ? 'Reinstate' : 'Deprecate'}</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ChartOfAccounts({ onViewHistory }: { onViewHistory: (code: string) => void }) {
   const [q, setQ] = useState('')
   const [view, setView] = useState<'tree' | 'flat'>('tree')
   const [openRoots, setOpenRoots] = useState<Set<string>>(new Set(Object.keys(COA_TREE)))
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  const [customAccounts, setCustomAccounts] = useState<typeof accounts>([])
+  const [overrides, setOverrides] = useState<Record<string, Partial<Acc>>>({})
+  const [extraCodes, setExtraCodes] = useState<Record<string, string[]>>({})
+  const [frozen, setFrozen] = useState<Set<string>>(new Set())
+  const [deprecated, setDeprecated] = useState<Set<string>>(new Set())
+  const [modal, setModal] = useState<{ mode: 'add' | 'edit' | 'child'; rootKey: string; groupLabel: string; account?: Acc } | null>(null)
+
+  const allAccounts = useMemo(() => [...accounts, ...customAccounts], [customAccounts])
+  const getAcc = (code: string) => {
+    const base = allAccounts.find((a) => a.code === code)
+    if (!base) return undefined
+    const o = overrides[code]
+    return o ? { ...base, ...o } : base
+  }
+  const codesFor = (rootKey: string, base: string[], groupLabel: string) => [...base, ...(extraCodes[`${rootKey}:${groupLabel}`] ?? [])]
 
   const query = q.trim().toLowerCase()
   const matches = (code: string, name: string) =>
@@ -134,15 +288,30 @@ function ChartOfAccounts() {
   const toggleGroup = (k: string) => setOpenGroups((s) => {
     const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n
   })
+  const toggleInSet = (set: Set<string>, setFn: (s: Set<string>) => void, code: string) => {
+    const n = new Set(set); n.has(code) ? n.delete(code) : n.add(code); setFn(n)
+  }
 
   const totalDebit = tb.reduce((s, a) => s + a.debit, 0)
   const totalCredit = tb.reduce((s, a) => s + a.credit, 0)
   const balanced = Math.abs(totalDebit - totalCredit) < 0.01
 
+  const saveAccount = (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: string; opening: number }) => {
+    if (modal?.mode === 'edit') {
+      setOverrides((o) => ({ ...o, [input.code]: { name_en: input.name_en, name_ar: input.name_ar, vat_box: input.vat_box } }))
+    } else {
+      setCustomAccounts((c) => [...c, { code: input.code, name_en: input.name_en, name_ar: input.name_ar, type: input.type, vat_box: input.vat_box } as Acc])
+      setExtraCodes((e) => ({ ...e, [`${input.type}:${input.group}`]: [...(e[`${input.type}:${input.group}`] ?? []), input.code] }))
+      setOpenRoots((s) => new Set(s).add(input.type))
+      setOpenGroups((s) => new Set(s).add(`${input.type}:${input.group}`))
+    }
+    setModal(null)
+  }
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Accounts" value={String(accounts.length)} hint={`${tb.length} with movement`} />
+        <Stat label="Accounts" value={String(allAccounts.length)} hint={`${tb.length} with movement`} />
         <Stat label="Total debits" value={sar(totalDebit, { compact: true })} />
         <Stat label="Total credits" value={sar(totalCredit, { compact: true })} />
         <Stat label="Trial balance" value={balanced ? 'Balanced' : 'Out of balance'} tone={balanced ? 'good' : 'bad'} hint={`${postings.length} journals posted`} />
@@ -154,9 +323,8 @@ function ChartOfAccounts() {
         sub="Same ledger accounts as the rest of the finance module, laid out as a tree you can search and drill into."
         right={
           <button
-            disabled
-            title="Preview — account creation isn't wired up yet"
-            className="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-teal-600/50 px-3 py-1.5 text-[13px] font-medium text-white"
+            onClick={() => setModal({ mode: 'add', rootKey: 'asset', groupLabel: COA_TREE.asset.groups[0].label })}
+            className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700"
           >
             <Plus className="h-3.5 w-3.5" /> New Account
           </button>
@@ -200,7 +368,7 @@ function ChartOfAccounts() {
           </div>
           {Object.entries(COA_TREE).map(([rootKey, root]) => {
             const rootOpen = openRoots.has(rootKey)
-            const rootAccounts = root.groups.flatMap((g) => g.codes.map((c) => accounts.find((a) => a.code === c)!).filter(Boolean))
+            const rootAccounts = root.groups.flatMap((g) => codesFor(rootKey, g.codes, g.label).map((c) => getAcc(c)!).filter(Boolean))
             const rootVisible = !query || rootAccounts.some((a) => matches(a.code, a.name_en))
             if (!rootVisible) return null
             const rootBalance = rootAccounts.reduce((s, a) => s + balanceOfAcc(a.code), 0)
@@ -218,7 +386,7 @@ function ChartOfAccounts() {
                 {rootOpen && root.groups.map((g) => {
                   const groupKey = `${rootKey}:${g.label}`
                   const groupOpen = openGroups.has(groupKey) || !!query
-                  const groupAccs = g.codes.map((c) => accounts.find((a) => a.code === c)!).filter(Boolean)
+                  const groupAccs = codesFor(rootKey, g.codes, g.label).map((c) => getAcc(c)!).filter(Boolean)
                   const groupVisible = !query || groupAccs.some((a) => matches(a.code, a.name_en))
                   if (!groupVisible) return null
                   const groupBalance = groupAccs.reduce((s, a) => s + balanceOfAcc(a.code), 0)
@@ -233,15 +401,30 @@ function ChartOfAccounts() {
                         <span>{g.label}</span>
                         <span className="ml-auto tabular font-normal text-slate-400">{sar(groupBalance, { compact: true })}</span>
                       </button>
-                      {groupOpen && groupAccs.filter((a) => matches(a.code, a.name_en)).map((a) => (
-                        <div key={a.code} className="flex items-center gap-2 py-1.5 pl-16 pr-3 text-[13px] text-slate-600 hover:bg-slate-50">
-                          <FileText className="h-3.5 w-3.5 text-slate-300" />
-                          <span className="tabular text-xs text-slate-400">{a.code}</span>
-                          <span>{a.name_en}</span>
-                          {a.vat_box && <Tag tone="brand">box {a.vat_box}</Tag>}
-                          <span className="ml-auto tabular text-slate-700">{sar(balanceOfAcc(a.code))}</span>
-                        </div>
-                      ))}
+                      {groupOpen && groupAccs.filter((a) => matches(a.code, a.name_en)).map((a) => {
+                        const isFrozen = frozen.has(a.code)
+                        const isDeprecated = deprecated.has(a.code)
+                        return (
+                          <div key={a.code} className={`flex items-center gap-2 py-1.5 pl-16 pr-3 text-[13px] hover:bg-slate-50 ${isDeprecated ? 'opacity-50' : ''}`}>
+                            <FileText className="h-3.5 w-3.5 text-slate-300" />
+                            <span className="tabular text-xs text-slate-400">{a.code}</span>
+                            <span className="text-slate-600">{a.name_en}</span>
+                            {a.vat_box && <Tag tone="brand">box {a.vat_box}</Tag>}
+                            {isFrozen && <Tag tone="rose">frozen</Tag>}
+                            {isDeprecated && <Tag tone="slate">deprecated</Tag>}
+                            <span className="ml-auto tabular text-slate-700">{sar(balanceOfAcc(a.code))}</span>
+                            <AccountActionsMenu
+                              frozen={isFrozen}
+                              deprecated={isDeprecated}
+                              onEdit={() => setModal({ mode: 'edit', rootKey, groupLabel: g.label, account: a })}
+                              onAddChild={() => setModal({ mode: 'child', rootKey, groupLabel: g.label, account: a })}
+                              onViewHistory={() => onViewHistory(a.code)}
+                              onToggleFreeze={() => toggleInSet(frozen, setFrozen, a.code)}
+                              onToggleDeprecate={() => toggleInSet(deprecated, setDeprecated, a.code)}
+                            />
+                          </div>
+                        )
+                      })}
                     </div>
                   )
                 })}
@@ -250,19 +433,46 @@ function ChartOfAccounts() {
           })}
         </div>
       ) : (
-        <Table head={['Code', 'Account', 'Type', 'VAT box', 'Balance']}>
-          {accounts.filter((a) => matches(a.code, a.name_en)).map((a) => (
-            <Row key={a.code}>
-              <Cell className="tabular text-xs text-slate-500">{a.code}</Cell>
-              <Cell>{a.name_en}</Cell>
-              <Cell className="text-xs text-slate-400">{COA_TREE[a.type]?.label ?? a.type}</Cell>
-              <Cell>{a.vat_box ? <Tag tone="brand">box {a.vat_box}</Tag> : <span className="text-slate-300">—</span>}</Cell>
-              <Cell className="tabular font-medium">{sar(balanceOfAcc(a.code))}</Cell>
-            </Row>
-          ))}
+        <Table head={['Code', 'Account', 'Type', 'VAT box', 'Balance', '']}>
+          {allAccounts.filter((a) => matches(a.code, a.name_en)).map((raw) => {
+            const a = getAcc(raw.code)!
+            const isFrozen = frozen.has(a.code)
+            const isDeprecated = deprecated.has(a.code)
+            return (
+              <Row key={a.code} className={isDeprecated ? 'opacity-50' : ''}>
+                <Cell className="tabular text-xs text-slate-500">{a.code}</Cell>
+                <Cell>{a.name_en} {isFrozen && <Tag tone="rose">frozen</Tag>}</Cell>
+                <Cell className="text-xs text-slate-400">{COA_TREE[a.type]?.label ?? a.type}</Cell>
+                <Cell>{a.vat_box ? <Tag tone="brand">box {a.vat_box}</Tag> : <span className="text-slate-300">—</span>}</Cell>
+                <Cell className="tabular font-medium">{sar(balanceOfAcc(a.code))}</Cell>
+                <Cell>
+                  <AccountActionsMenu
+                    frozen={isFrozen}
+                    deprecated={isDeprecated}
+                    onEdit={() => setModal({ mode: 'edit', rootKey: a.type, groupLabel: COA_TREE[a.type]?.groups[0]?.label ?? '', account: a })}
+                    onAddChild={() => setModal({ mode: 'child', rootKey: a.type, groupLabel: COA_TREE[a.type]?.groups[0]?.label ?? '', account: a })}
+                    onViewHistory={() => onViewHistory(a.code)}
+                    onToggleFreeze={() => toggleInSet(frozen, setFrozen, a.code)}
+                    onToggleDeprecate={() => toggleInSet(deprecated, setDeprecated, a.code)}
+                  />
+                </Cell>
+              </Row>
+            )
+          })}
         </Table>
       )}
       </Card>
+
+      {modal && (
+        <AccountModal
+          mode={modal.mode}
+          rootKey={modal.rootKey}
+          groupLabel={modal.groupLabel}
+          account={modal.account}
+          onClose={() => setModal(null)}
+          onSave={saveAccount}
+        />
+      )}
     </>
   )
 }
@@ -330,14 +540,154 @@ function GeneralLedger({ account, onAccount }: { account: string; onAccount: (v:
 
 /* ------------------------------------------------------------ Journal Entries */
 
+type JeLine = { id: number; account: string; desc: string; debit: string; credit: string }
+
+function NewJournalEntryForm({
+  nextJvNo, onCancel, onPost,
+}: {
+  nextJvNo: string
+  onCancel: () => void
+  onPost: (entry: (typeof postings)[number]) => void
+}) {
+  const [date, setDate] = useState('2026-08-15')
+  const [reference, setReference] = useState('')
+  const [memo, setMemo] = useState('')
+  const [lines, setLines] = useState<JeLine[]>([
+    { id: 1, account: accounts[0]?.code ?? '', desc: '', debit: '', credit: '' },
+    { id: 2, account: accounts[1]?.code ?? '', desc: '', debit: '', credit: '' },
+  ])
+  const [error, setError] = useState('')
+
+  const updateLine = (id: number, patch: Partial<JeLine>) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+  const addLine = () => setLines((ls) => [...ls, { id: (ls.at(-1)?.id ?? 0) + 1, account: accounts[0]?.code ?? '', desc: '', debit: '', credit: '' }])
+  const removeLine = (id: number) => setLines((ls) => (ls.length > 2 ? ls.filter((l) => l.id !== id) : ls))
+
+  const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
+  const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
+  const diff = Math.round((totalDebit - totalCredit) * 100) / 100
+  const balanced = diff === 0 && totalDebit > 0
+
+  const post = () => {
+    if (!memo.trim()) { setError('A narration is required so this entry is auditable later.'); return }
+    if (!balanced) { setError('Total debit and total credit must match before posting.'); return }
+    const postedLines = lines
+      .filter((l) => (Number(l.debit) || 0) > 0 || (Number(l.credit) || 0) > 0)
+      .map((l) => {
+        const acc = accounts.find((a) => a.code === l.account)
+        return { account: l.account, account_name: acc?.name_en ?? l.account, job_no: null, desc: l.desc, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 }
+      })
+    onPost({
+      jv_no: nextJvNo,
+      date,
+      memo: reference ? `${memo} (${reference})` : memo,
+      prepared_by: 'Accounts - Amal',
+      approved_by: null,
+      source: 'Manual journal',
+      lines: postedLines,
+    } as (typeof postings)[number])
+  }
+
+  return (
+    <Card className="mb-6">
+      <CardHead title="New Journal Entry" sub="Standard double-entry capture — one row per ledger account touched. Debit and credit must balance before this can post." />
+      <div className="grid grid-cols-2 gap-4 px-5 py-4 sm:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Posting date</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Reference (optional)</span>
+          <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO / invoice / claim no." className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+        </label>
+        <label className="col-span-2 block">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Narration</span>
+          <input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="What this entry records, in plain words" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+        </label>
+      </div>
+
+      <Table head={['Account', 'Description', 'Debit', 'Credit', '']}>
+        {lines.map((l) => (
+          <Row key={l.id}>
+            <Cell>
+              <select value={l.account} onChange={(e) => updateLine(l.id, { account: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800">
+                {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} · {a.name_en}</option>)}
+              </select>
+            </Cell>
+            <Cell>
+              <input value={l.desc} onChange={(e) => updateLine(l.id, { desc: e.target.value })} placeholder="Line description" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700" />
+            </Cell>
+            <Cell>
+              <input value={l.debit} onChange={(e) => updateLine(l.id, { debit: e.target.value, credit: e.target.value ? '' : l.credit })} type="number" placeholder="0.00" className="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs tabular text-slate-800" />
+            </Cell>
+            <Cell>
+              <input value={l.credit} onChange={(e) => updateLine(l.id, { credit: e.target.value, debit: e.target.value ? '' : l.debit })} type="number" placeholder="0.00" className="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs tabular text-slate-800" />
+            </Cell>
+            <Cell>
+              {lines.length > 2 && (
+                <button onClick={() => removeLine(l.id)} className="rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
+              )}
+            </Cell>
+          </Row>
+        ))}
+        <Row className="bg-slate-50 font-semibold">
+          <Cell>
+            <button onClick={addLine} className="flex items-center gap-1 text-[12px] font-medium text-teal-700 hover:text-teal-800"><Plus className="h-3.5 w-3.5" /> Add line</button>
+          </Cell>
+          <Cell className="text-slate-500">Total</Cell>
+          <Cell className="tabular">{num(totalDebit, 2)}</Cell>
+          <Cell className="tabular">{num(totalCredit, 2)}</Cell>
+          <Cell />
+        </Row>
+      </Table>
+
+      <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3.5">
+        <div className="text-[13px]">
+          {balanced ? (
+            <span className="font-medium text-teal-700">Balanced — ready to post</span>
+          ) : (
+            <span className="font-medium text-amber-700">Out of balance by {num(Math.abs(diff), 2)} SAR</span>
+          )}
+          {error && <span className="ml-3 text-red-600">{error}</span>}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button onClick={post} disabled={!balanced} className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-600/40">
+            Post entry
+          </button>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 function JournalEntries({ selected, onSelect }: { selected: string | null; onSelect: (v: string) => void }) {
-  const sel = postings.find((p) => p.jv_no === selected) ?? postings[0]
+  const [customPostings, setCustomPostings] = useState<typeof postings>([])
+  const [showNew, setShowNew] = useState(false)
+  const allPostings = useMemo(() => [...customPostings, ...postings], [customPostings])
+  const sel = allPostings.find((p) => p.jv_no === selected) ?? allPostings[0]
+
+  const nextJvNo = useMemo(() => {
+    const nums = postings.map((p) => Number(p.jv_no.split('-').at(-1))).filter((n) => !Number.isNaN(n))
+    const next = Math.max(0, ...nums) + 1 + customPostings.length
+    return `JV-2026-${String(next).padStart(4, '0')}`
+  }, [customPostings.length])
+
   return (
     <>
       <Card>
-        <CardHead title="Journal Entries" sub="Every voucher posted to the ledger — sales, purchases, expense claims and manual journals alike." />
+        <CardHead
+          title="Journal Entries"
+          sub="Every voucher posted to the ledger — sales, purchases, expense claims and manual journals alike."
+          right={
+            !showNew ? (
+              <button onClick={() => setShowNew(true)} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700">
+                <Plus className="h-3.5 w-3.5" /> New Journal Entry
+              </button>
+            ) : undefined
+          }
+        />
         <Table head={['Voucher No', 'Date', 'Type', 'Remarks', 'Prepared by', 'Total']}>
-          {postings.map((p) => {
+          {allPostings.map((p) => {
             const total = p.lines.reduce((s, l) => s + l.debit, 0)
             return (
               <Row
@@ -356,6 +706,18 @@ function JournalEntries({ selected, onSelect }: { selected: string | null; onSel
           })}
         </Table>
       </Card>
+
+      {showNew && (
+        <NewJournalEntryForm
+          nextJvNo={nextJvNo}
+          onCancel={() => setShowNew(false)}
+          onPost={(entry) => {
+            setCustomPostings((c) => [entry, ...c])
+            onSelect(entry.jv_no)
+            setShowNew(false)
+          }}
+        />
+      )}
 
       {sel && (
         <Card className="mt-6">
