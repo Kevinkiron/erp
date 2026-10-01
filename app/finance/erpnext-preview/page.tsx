@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react'
 import { Card, CardHead, PageHead, Stat, Table, Row, Cell, Tag, Field } from '@/components/ui'
 import { num, sar, day } from '@/lib/format'
-import { postings, ageing, banks } from '@/lib/finance-data'
-import { accounts } from '@/lib/finance'
+import { postings, ageing, banks, tb } from '@/lib/finance-data'
+import { accounts, COMPANY } from '@/lib/finance'
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Search, Plus, List } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,10 +20,6 @@ export const dynamic = 'force-dynamic'
  * the only thing that changes when we actually integrate is where that data
  * comes from, not the shape of these screens.
  */
-
-const ROOT_TYPE: Record<string, string> = {
-  asset: 'Asset', liability: 'Liability', equity: 'Equity', revenue: 'Income', cost: 'Expense', expense: 'Expense',
-}
 
 const TABS = [
   { key: 'coa', label: 'Chart of Accounts' },
@@ -74,36 +71,198 @@ export default function ErpNextPreview() {
 
 /* ------------------------------------------------------------ Chart of Accounts */
 
+/**
+ * Laid out as a searchable, collapsible tree (root group -> sub-ledger ->
+ * account) rather than our usual flat table — modelled on the account-setup
+ * screen a client shared with us (a hospital ERP's Chart of Accounts), reskinned
+ * onto our own brand, codes and account names. The grouping below is real:
+ * it follows the 4-digit code ranges already in lib/seed/finance.ts, not an
+ * invented structure.
+ */
+
+type CoaGroup = { label: string; codes: string[] }
+const COA_TREE: Record<string, { label: string; groups: CoaGroup[] }> = {
+  asset: {
+    label: 'Assets',
+    groups: [
+      { label: 'Cash and bank', codes: ['1010', '1020', '1030'] },
+      { label: 'Receivables', codes: ['1100'] },
+      { label: 'VAT recoverable', codes: ['1200', '1210', '1220'] },
+      { label: 'Prepayments and advances', codes: ['1250'] },
+      { label: 'Customs duty paid on behalf of clients', codes: ['1300'] },
+      { label: 'Fixed assets', codes: ['1500', '1510', '1520'] },
+    ],
+  },
+  liability: {
+    label: 'Liabilities',
+    groups: [
+      { label: 'Payables', codes: ['2010', '2020'] },
+      { label: 'Customs duty payable', codes: ['2050'] },
+      { label: 'VAT payable', codes: ['2100', '2110'] },
+      { label: 'Client duty advances held', codes: ['2150'] },
+      { label: 'Accrued and statutory', codes: ['2200', '2260', '2270', '2300', '2400'] },
+    ],
+  },
+  equity: { label: 'Equity', groups: [{ label: 'Share capital and reserves', codes: ['3010', '3020', '3030'] }] },
+  revenue: {
+    label: 'Revenue',
+    groups: [
+      { label: 'Operating revenue', codes: ['4010', '4020', '4030', '4040', '4050', '4060'] },
+      { label: 'Other income', codes: ['4900'] },
+    ],
+  },
+  cost: { label: 'Direct costs', groups: [{ label: 'Direct costs', codes: ['5010', '5020', '5030', '5040', '5050', '5060', '5070', '5080'] }] },
+  expense: { label: 'Operating expenses', groups: [{ label: 'Operating expenses', codes: ['6010', '6020', '6030', '6040', '6060', '6070', '6080', '6090', '6100', '6900'] }] },
+}
+
+const balanceOfAcc = (code: string) => tb.find((a) => a.code === code)?.balance ?? 0
+
 function ChartOfAccounts() {
-  const groups = ['asset', 'liability', 'equity', 'revenue', 'cost', 'expense']
+  const [q, setQ] = useState('')
+  const [view, setView] = useState<'tree' | 'flat'>('tree')
+  const [openRoots, setOpenRoots] = useState<Set<string>>(new Set(Object.keys(COA_TREE)))
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  const query = q.trim().toLowerCase()
+  const matches = (code: string, name: string) =>
+    !query || code.includes(query) || name.toLowerCase().includes(query)
+
+  const toggleRoot = (k: string) => setOpenRoots((s) => {
+    const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n
+  })
+  const toggleGroup = (k: string) => setOpenGroups((s) => {
+    const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n
+  })
+
+  const totalDebit = tb.reduce((s, a) => s + a.debit, 0)
+  const totalCredit = tb.reduce((s, a) => s + a.credit, 0)
+  const balanced = Math.abs(totalDebit - totalCredit) < 0.01
+
   return (
-    <Card>
+    <>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Accounts" value={String(accounts.length)} hint={`${tb.length} with movement`} />
+        <Stat label="Total debits" value={sar(totalDebit, { compact: true })} />
+        <Stat label="Total credits" value={sar(totalCredit, { compact: true })} />
+        <Stat label="Trial balance" value={balanced ? 'Balanced' : 'Out of balance'} tone={balanced ? 'good' : 'bad'} hint={`${postings.length} journals posted`} />
+      </div>
+
+      <Card className="mt-6">
       <CardHead
         title="Chart of Accounts"
-        sub="Same accounts as our finance module, relabelled onto ERPNext's fields — account number, root type, account type."
+        sub="Same ledger accounts as the rest of the finance module, laid out as a tree you can search and drill into."
+        right={
+          <button
+            disabled
+            title="Preview — account creation isn't wired up yet"
+            className="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-teal-600/50 px-3 py-1.5 text-[13px] font-medium text-white"
+          >
+            <Plus className="h-3.5 w-3.5" /> New Account
+          </button>
+        }
       />
-      <Table head={['Account Number', 'Account Name', 'Root Type', 'Account Type', 'VAT box']}>
-        {groups.flatMap((g) => {
-          const rows = accounts.filter((a) => a.type === g)
-          if (!rows.length) return []
-          return [
-            <Row key={`h-${g}`} className="bg-slate-50/80">
-              <Cell className="font-semibold text-slate-800">{ROOT_TYPE[g]}</Cell>
-              <Cell /><Cell /><Cell /><Cell />
-            </Row>,
-            ...rows.map((a) => (
-              <Row key={a.code}>
-                <Cell className="tabular text-xs text-slate-500">{a.code}</Cell>
-                <Cell>{a.name_en}</Cell>
-                <Cell className="text-xs text-slate-400">{ROOT_TYPE[a.type]}</Cell>
-                <Cell className="text-xs text-slate-400">{a.type === 'asset' && a.code.startsWith('10') ? 'Bank' : a.type === 'asset' ? 'Current Asset' : a.type === 'liability' ? 'Current Liability' : a.type === 'revenue' ? 'Income Account' : a.type === 'cost' ? 'Cost of Goods Sold' : a.type === 'expense' ? 'Expense Account' : 'Equity'}</Cell>
-                <Cell>{a.vat_box ? <Tag tone="brand">box {a.vat_box}</Tag> : <span className="text-slate-300">—</span>}</Cell>
-              </Row>
-            )),
-          ]
-        })}
-      </Table>
-    </Card>
+
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-slate-100 px-5 py-3.5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search code or name"
+            className="w-56 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400"
+          />
+        </div>
+        <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[13px] text-slate-600">
+          {COMPANY.legal_name_en}
+        </span>
+        <div className="ml-auto flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+          <button
+            onClick={() => setView('tree')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium ${view === 'tree' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}
+          >
+            <FolderOpen className="h-3.5 w-3.5" /> Tree
+          </button>
+          <button
+            onClick={() => setView('flat')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium ${view === 'flat' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}
+          >
+            <List className="h-3.5 w-3.5" /> Flat
+          </button>
+        </div>
+      </div>
+
+      {view === 'tree' ? (
+        <div className="px-2 py-2">
+          <div className="flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-slate-800">
+            <Folder className="h-4 w-4 text-slate-300" />
+            <span>{COMPANY.legal_name_en}</span>
+          </div>
+          {Object.entries(COA_TREE).map(([rootKey, root]) => {
+            const rootOpen = openRoots.has(rootKey)
+            const rootAccounts = root.groups.flatMap((g) => g.codes.map((c) => accounts.find((a) => a.code === c)!).filter(Boolean))
+            const rootVisible = !query || rootAccounts.some((a) => matches(a.code, a.name_en))
+            if (!rootVisible) return null
+            const rootBalance = rootAccounts.reduce((s, a) => s + balanceOfAcc(a.code), 0)
+            return (
+              <div key={rootKey}>
+                <button
+                  onClick={() => toggleRoot(rootKey)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  {rootOpen ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
+                  {rootOpen ? <FolderOpen className="h-4 w-4 text-teal-600" /> : <Folder className="h-4 w-4 text-teal-600" />}
+                  <span>{root.label}</span>
+                  <span className="ml-auto tabular font-normal text-slate-400">{sar(rootBalance, { compact: true })}</span>
+                </button>
+                {rootOpen && root.groups.map((g) => {
+                  const groupKey = `${rootKey}:${g.label}`
+                  const groupOpen = openGroups.has(groupKey) || !!query
+                  const groupAccs = g.codes.map((c) => accounts.find((a) => a.code === c)!).filter(Boolean)
+                  const groupVisible = !query || groupAccs.some((a) => matches(a.code, a.name_en))
+                  if (!groupVisible) return null
+                  const groupBalance = groupAccs.reduce((s, a) => s + balanceOfAcc(a.code), 0)
+                  return (
+                    <div key={groupKey}>
+                      <button
+                        onClick={() => toggleGroup(groupKey)}
+                        className="flex w-full items-center gap-2 rounded-lg py-1.5 pl-9 pr-3 text-left text-[13px] text-slate-700 hover:bg-slate-50"
+                      >
+                        {groupOpen ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
+                        {groupOpen ? <FolderOpen className="h-4 w-4 text-slate-400" /> : <Folder className="h-4 w-4 text-slate-400" />}
+                        <span>{g.label}</span>
+                        <span className="ml-auto tabular font-normal text-slate-400">{sar(groupBalance, { compact: true })}</span>
+                      </button>
+                      {groupOpen && groupAccs.filter((a) => matches(a.code, a.name_en)).map((a) => (
+                        <div key={a.code} className="flex items-center gap-2 py-1.5 pl-16 pr-3 text-[13px] text-slate-600 hover:bg-slate-50">
+                          <FileText className="h-3.5 w-3.5 text-slate-300" />
+                          <span className="tabular text-xs text-slate-400">{a.code}</span>
+                          <span>{a.name_en}</span>
+                          {a.vat_box && <Tag tone="brand">box {a.vat_box}</Tag>}
+                          <span className="ml-auto tabular text-slate-700">{sar(balanceOfAcc(a.code))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <Table head={['Code', 'Account', 'Type', 'VAT box', 'Balance']}>
+          {accounts.filter((a) => matches(a.code, a.name_en)).map((a) => (
+            <Row key={a.code}>
+              <Cell className="tabular text-xs text-slate-500">{a.code}</Cell>
+              <Cell>{a.name_en}</Cell>
+              <Cell className="text-xs text-slate-400">{COA_TREE[a.type]?.label ?? a.type}</Cell>
+              <Cell>{a.vat_box ? <Tag tone="brand">box {a.vat_box}</Tag> : <span className="text-slate-300">—</span>}</Cell>
+              <Cell className="tabular font-medium">{sar(balanceOfAcc(a.code))}</Cell>
+            </Row>
+          ))}
+        </Table>
+      )}
+      </Card>
+    </>
   )
 }
 
@@ -146,7 +305,7 @@ function GeneralLedger({ account, onAccount }: { account: string; onAccount: (v:
         <Stat label="Account" value={account} hint={acc?.name_en} />
         <Stat label="GL entries" value={String(glRows.length)} />
         <Stat label="Closing balance" value={sar(closing, { compact: true })} tone={closing >= 0 ? 'default' : 'bad'} />
-        <Stat label="Root type" value={acc ? ROOT_TYPE[acc.type] : '—'} />
+        <Stat label="Root type" value={acc ? (COA_TREE[acc.type]?.label ?? acc.type) : '—'} />
       </div>
 
       <Card className="mt-6">
