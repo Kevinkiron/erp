@@ -86,11 +86,11 @@ const COA_TREE: Record<string, { label: string; groups: CoaGroup[] }> = {
     label: 'Assets',
     groups: [
       { label: 'Cash and bank', codes: ['1010', '1020', '1030'] },
-      { label: 'Receivables', codes: ['1100'] },
+      { label: 'Receivables', codes: ['1100', '1150'] },
       { label: 'VAT recoverable', codes: ['1200', '1210', '1220'] },
       { label: 'Prepayments and advances', codes: ['1250'] },
       { label: 'Customs duty paid on behalf of clients', codes: ['1300'] },
-      { label: 'Fixed assets', codes: ['1500', '1510', '1520'] },
+      { label: 'Fixed assets', codes: ['1500', '1510', '1520', '1521'] },
     ],
   },
   liability: {
@@ -99,7 +99,8 @@ const COA_TREE: Record<string, { label: string; groups: CoaGroup[] }> = {
       { label: 'Payables', codes: ['2010', '2020'] },
       { label: 'Customs duty payable', codes: ['2050'] },
       { label: 'VAT payable', codes: ['2100', '2110'] },
-      { label: 'Client duty advances held', codes: ['2150'] },
+      { label: 'Customs duty advances held', codes: ['2150'] },
+      { label: 'Customer advances (unearned revenue)', codes: ['2160'] },
       { label: 'Accrued and statutory', codes: ['2200', '2260', '2270', '2300', '2400'] },
     ],
   },
@@ -112,7 +113,7 @@ const COA_TREE: Record<string, { label: string; groups: CoaGroup[] }> = {
     ],
   },
   cost: { label: 'Direct costs', groups: [{ label: 'Direct costs', codes: ['5010', '5020', '5030', '5040', '5050', '5060', '5070', '5080'] }] },
-  expense: { label: 'Operating expenses', groups: [{ label: 'Operating expenses', codes: ['6010', '6020', '6030', '6040', '6060', '6070', '6080', '6090', '6100', '6900'] }] },
+  expense: { label: 'Operating expenses', groups: [{ label: 'Operating expenses', codes: ['6010', '6020', '6030', '6040', '6050', '6060', '6070', '6080', '6090', '6100', '6900'] }] },
 }
 
 const balanceOfAcc = (code: string) => tb.find((a) => a.code === code)?.balance ?? 0

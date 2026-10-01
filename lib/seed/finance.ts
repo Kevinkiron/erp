@@ -6,6 +6,16 @@
  * real thing has to work: the return is produced from the ledger, never typed in.
  */
 
+/**
+ * OPEN QUESTION — not yet resolved, flagged 2026-10-01:
+ * The trading name carries "Est." (مؤسسة, a sole establishment under Saudi law),
+ * but the equity accounts below (3010 Share capital, 3030 Statutory reserve) use
+ * Companies-Law terminology for an LLC/JSC. If this is genuinely a sole
+ * establishment, equity should instead be "Owner's capital" / "Owner's drawings",
+ * and the statutory-reserve requirement may not apply at all. Confirm the actual
+ * registered legal form (CR documents / accountant) before this chart goes live,
+ * then update the three equity accounts accordingly — do not guess.
+ */
 export const COMPANY = {
   legal_name_en: 'Logistica Clearing & Forwarding Est.',
   legal_name_ar: 'مؤسسة لوجستيكا للتخليص والشحن',
@@ -31,6 +41,7 @@ export const accounts: A[] = [
   acc('1020', 'Bank — Riyad Bank current', 'بنك الرياض — الحساب الجاري', 'asset'),
   acc('1030', 'Bank — SNB collections', 'البنك الأهلي — حساب التحصيل', 'asset'),
   acc('1100', 'Trade receivables', 'الذمم المدينة التجارية', 'asset'),
+  acc('1150', 'Allowance for doubtful debts', 'مخصص الديون المشكوك في تحصيلها', 'asset'),
   acc('1200', 'Input VAT recoverable', 'ضريبة القيمة المضافة على المشتريات', 'asset', 7),
   acc('1210', 'Input VAT — imports at customs', 'ضريبة المدخلات — الواردات بالجمارك', 'asset', 8),
   acc('1220', 'Input VAT — reverse charge', 'ضريبة المدخلات — الاحتساب العكسي', 'asset', 9),
@@ -39,6 +50,7 @@ export const accounts: A[] = [
   acc('1500', 'Trucks and vehicles', 'الشاحنات والمركبات', 'asset'),
   acc('1510', 'Accumulated depreciation — vehicles', 'مجمع إهلاك المركبات', 'asset'),
   acc('1520', 'Warehouse equipment', 'معدات المستودع', 'asset'),
+  acc('1521', 'Accumulated depreciation — warehouse equipment', 'مجمع إهلاك معدات المستودع', 'asset'),
 
   acc('2010', 'Trade payables', 'الذمم الدائنة التجارية', 'liability'),
   acc('2020', 'Employee payables', 'مستحقات الموظفين', 'liability'),
@@ -46,6 +58,7 @@ export const accounts: A[] = [
   acc('2100', 'Output VAT payable', 'ضريبة القيمة المضافة على المبيعات', 'liability', 1),
   acc('2110', 'Output VAT — reverse charge', 'ضريبة المخرجات — الاحتساب العكسي', 'liability', 9),
   acc('2150', 'Client duty advances held', 'دفعات العملاء المقدمة للرسوم', 'liability'),
+  acc('2160', 'Advances from customers', 'دفعات مقدمة من العملاء', 'liability'),
   acc('2200', 'Accrued expenses', 'المصروفات المستحقة', 'liability'),
   acc('2260', 'GOSI payable', 'التأمينات الاجتماعية المستحقة', 'liability'),
   acc('2270', 'End of service award provision', 'مخصص مكافأة نهاية الخدمة', 'liability'),
@@ -77,6 +90,7 @@ export const accounts: A[] = [
   acc('6020', 'GOSI employer contribution', 'حصة صاحب العمل بالتأمينات', 'expense'),
   acc('6030', 'End of service award expense', 'مصروف مكافأة نهاية الخدمة', 'expense'),
   acc('6040', 'Rent', 'الإيجار', 'expense'),
+  acc('6050', 'Zakat expense', 'مصروف الزكاة', 'expense'),
   acc('6060', 'Insurance', 'التأمين', 'expense'),
   acc('6070', 'Vehicle repairs and maintenance', 'صيانة المركبات', 'expense'),
   acc('6080', 'Professional and legal fees', 'الأتعاب المهنية', 'expense'),

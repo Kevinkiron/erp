@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { getPnl, getDutyBalances, DUTY_ALERT_THRESHOLD } from '@/lib/db'
-import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Empty } from '@/components/ui'
+import { Card, CardHead, PageHead, Stat, Pill, Table, Row, Cell, Empty, Tag } from '@/components/ui'
 import { Pipeline } from '@/components/charts/basic'
-import { sar, num, day, stamp, JOB_TYPE_LABEL } from '@/lib/format'
+import { sar, num, day, stamp, JOB_TYPE_LABEL, titleCase } from '@/lib/format'
 import { AlertTriangle, ArrowRight, Truck, PackageSearch } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -11,16 +11,17 @@ export const dynamic = 'force-dynamic'
 const OPEN = ['draft', 'documents_pending', 'in_progress', 'cleared', 'in_warehouse', 'in_transit', 'on_hold']
 
 export default async function Dashboard() {
-  const [{ data: jobs }, pnl, balances, { data: trips }, { data: fleet }] = await Promise.all([
+  const [{ data: jobs }, pnl, balances, { data: trips }, { data: fleet }, { data: staff }, { data: crew }] = await Promise.all([
     supabase.from('jobs').select('*, clients(code,name)').order('opened_on', { ascending: false }),
     getPnl(),
     getDutyBalances(),
     supabase
       .from('transport_details')
       .select('*, jobs(job_no,status,consignee,clients(name)), trucks(plate_no), staff(full_name)')
-      .order('pickup_at', { ascending: false })
-      .limit(6),
+      .order('pickup_at', { ascending: false }),
     supabase.from('v_fleet_utilisation').select('*'),
+    supabase.from('staff').select('*').order('emp_no'),
+    supabase.from('transport_crew').select('staff_id,job_id'),
   ])
 
   const all = jobs ?? []
@@ -33,6 +34,55 @@ export default async function Dashboard() {
   const mtdRev = mtd.reduce((s, p) => s + Number(p.revenue_sar), 0)
   const dutyPaid = pnl.reduce((s, p) => s + Number(p.duty_paid_sar), 0)
   const idle = (fleet ?? []).filter((t) => t.active && Number(t.trips) === 0)
+
+  // ---- Ops snapshot additions: jobs-by-status, crew deployed today, workload calendar.
+  // All computed from the same real jobs/transport/staff data the rest of this page
+  // already reads — nothing here is invented or simulated separately.
+  const TODAY = '2026-08-15' // same fixed demo "today" used across the app (lib/finance.ts ageing, lib/local-client.ts)
+  const addDays = (dateStr: string, n: number) => {
+    const d = new Date(dateStr + 'T00:00:00Z')
+    d.setUTCDate(d.getUTCDate() + n)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const STATUS_ORDER = ['draft', 'documents_pending', 'in_progress', 'cleared', 'in_warehouse', 'in_transit', 'on_hold', 'completed', 'delivered', 'installed', 'cancelled']
+  const statusCounts = STATUS_ORDER
+    .map((status) => ({ status, count: all.filter((j) => j.status === status).length }))
+    .filter((s) => s.count > 0)
+
+  const allTrips = trips ?? []
+  const activeTripsToday = allTrips.filter((t) => {
+    const pick = (t.pickup_at ?? '').slice(0, 10)
+    const drop = t.delivered_at ? t.delivered_at.slice(0, 10) : null
+    return pick <= TODAY && (drop === null || drop >= TODAY)
+  })
+  const jobForStaff = new Map<string, (typeof allTrips)[number]>()
+  for (const t of activeTripsToday) if (t.driver_id) jobForStaff.set(t.driver_id, t)
+  for (const c of crew ?? []) {
+    const t = activeTripsToday.find((x) => x.job_id === c.job_id)
+    if (t) jobForStaff.set(c.staff_id, t)
+  }
+  const deployed = (staff ?? []).filter((s) => jobForStaff.has(s.id))
+  const available = (staff ?? []).filter((s) => s.active && !jobForStaff.has(s.id))
+
+  const workloadDays = Array.from({ length: 14 }, (_, i) => {
+    const date = addDays(TODAY, i - 13)
+    const count = allTrips.filter((t) => {
+      const start = (t.pickup_at ?? '').slice(0, 10)
+      const end = t.delivered_at ? t.delivered_at.slice(0, 10) : TODAY
+      return start <= date && date <= end
+    }).length
+    return { date, count }
+  })
+  const maxDay = Math.max(...workloadDays.map((d) => d.count), 1)
+  const toneForLoad = (n: number) => {
+    if (n === 0) return 'bg-slate-50 text-slate-300'
+    const pct = n / maxDay
+    if (pct > 0.75) return 'bg-teal-600 text-white'
+    if (pct > 0.5) return 'bg-teal-400 text-white'
+    if (pct > 0.25) return 'bg-teal-200 text-teal-800'
+    return 'bg-teal-100 text-teal-700'
+  }
 
   const stages = [
     { key: 'customs_clearance', label: 'Customs Clearance' },
@@ -117,11 +167,11 @@ export default async function Dashboard() {
               </Link>
             }
           />
-          {(trips ?? []).length === 0 ? (
+          {allTrips.length === 0 ? (
             <Empty>No movements recorded.</Empty>
           ) : (
             <Table head={['Job', 'Destination', 'Truck / Driver', 'Distance', 'Picked up', 'Status']}>
-              {(trips ?? []).map((t) => (
+              {allTrips.slice(0, 6).map((t) => (
                 <Row key={t.job_id}>
                   <Cell>
                     <Link href={`/jobs/${encodeURIComponent(t.jobs?.job_no ?? '')}`} className="font-medium text-teal-700 hover:underline">
@@ -139,6 +189,75 @@ export default async function Dashboard() {
               ))}
             </Table>
           )}
+        </Card>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-1">
+          <CardHead title="Jobs by status" sub="Every open and closed job, right now" />
+          <div className="flex flex-col gap-2.5 p-5">
+            {statusCounts.map((s) => (
+              <div key={s.status} className="flex items-center justify-between">
+                <Pill status={s.status} />
+                <span className="tabular text-sm font-semibold text-slate-800">{s.count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="xl:col-span-1">
+          <CardHead
+            title="Crew deployed today"
+            sub={`${deployed.length} out in the field, ${available.length} available \u2014 ${day(TODAY)}`}
+          />
+          <div className="max-h-[260px] divide-y divide-slate-100 overflow-y-auto">
+            {deployed.map((s) => {
+              const t = jobForStaff.get(s.id)
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-slate-800">{s.full_name}</div>
+                    <div className="truncate text-xs text-slate-500">{titleCase(s.role)} \u00b7 {t?.jobs?.job_no}</div>
+                  </div>
+                  <Pill status={t?.jobs?.status} />
+                </div>
+              )
+            })}
+            {deployed.length === 0 && <Empty>No crew out on a trip today.</Empty>}
+          </div>
+          {available.length > 0 && (
+            <div className="border-t border-slate-100 px-5 py-3">
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                Available ({available.length})
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {available.map((s) => (
+                  <Tag key={s.id}>{s.full_name}</Tag>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <Card className="xl:col-span-1">
+          <CardHead title="Workload \u2014 last 14 days" sub="Transport legs active each day, across the whole fleet" />
+          <div className="p-5">
+            <div className="grid grid-cols-7 gap-1.5">
+              {workloadDays.map((d) => (
+                <div
+                  key={d.date}
+                  title={`${day(d.date)}: ${d.count} leg${d.count === 1 ? '' : 's'}`}
+                  className={`flex aspect-square flex-col items-center justify-center rounded-md text-[11px] font-semibold ${toneForLoad(d.count)}`}
+                >
+                  {Number(d.date.slice(8, 10))}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+              <span>{day(workloadDays[0].date)}</span>
+              <span>{day(workloadDays.at(-1)!.date)}</span>
+            </div>
+          </div>
         </Card>
       </div>
 
