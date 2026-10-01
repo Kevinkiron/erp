@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileCheck2, Truck, Warehouse, Wrench, Wallet,
   ClipboardSignature, MonitorDot, BarChart3, Settings, Users, Ship, LineChart,
-  Landmark, ReceiptText, BookOpen, Library, Banknote, FileSpreadsheet, Coins,
+  Landmark, ReceiptText, BookOpen, Library, Banknote, FileSpreadsheet, Coins, FlaskConical,
 } from 'lucide-react'
 
 const NAV = [
@@ -24,6 +24,7 @@ const NAV = [
     { href: '/finance/claims', label: 'Expense Claims', icon: Coins },
     { href: '/finance/journal', label: 'General Journal', icon: BookOpen },
     { href: '/finance/accounts', label: 'Chart of Accounts', icon: Library },
+    { href: '/finance/erpnext-preview', label: 'ERPNext Preview', icon: FlaskConical },
     { href: '/finance/bank', label: 'Bank Reconciliation', icon: Banknote },
     { href: '/finance/vat', label: 'VAT Return', icon: Wallet },
   ]},
