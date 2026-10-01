@@ -135,14 +135,14 @@ function AccountModal({
   groupLabel: string
   account?: Acc
   onClose: () => void
-  onSave: (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: string; opening: number }) => void
+  onSave: (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: number; opening: number }) => void
 }) {
   const [code, setCode] = useState(mode === 'edit' ? account?.code ?? '' : '')
   const [nameEn, setNameEn] = useState(mode === 'edit' ? account?.name_en ?? '' : '')
   const [nameAr, setNameAr] = useState(mode === 'edit' ? account?.name_ar ?? '' : '')
   const [type, setType] = useState(mode === 'edit' ? account?.type ?? rootKey : rootKey)
   const [group, setGroup] = useState(groupLabel)
-  const [vatBox, setVatBox] = useState(mode === 'edit' ? account?.vat_box ?? '' : '')
+  const [vatBox, setVatBox] = useState(mode === 'edit' ? String(account?.vat_box ?? '') : '')
   const [opening, setOpening] = useState('0')
   const [error, setError] = useState('')
 
@@ -152,7 +152,7 @@ function AccountModal({
   const submit = () => {
     if (mode !== 'edit' && !/^\d{4}$/.test(code)) { setError('Account code must be 4 digits, matching the existing numbering (e.g. 1160).'); return }
     if (!nameEn.trim()) { setError('Account name is required.'); return }
-    onSave({ code, name_en: nameEn.trim(), name_ar: nameAr.trim(), type, group, vat_box: vatBox.trim() || undefined, opening: Number(opening) || 0 })
+    onSave({ code, name_en: nameEn.trim(), name_ar: nameAr.trim(), type, group, vat_box: vatBox.trim() ? Number(vatBox.trim()) : undefined, opening: Number(opening) || 0 })
   }
 
   return (
@@ -302,7 +302,7 @@ function ChartOfAccounts({ onViewHistory }: { onViewHistory: (code: string) => v
   const totalCredit = tb.reduce((s, a) => s + a.credit, 0)
   const balanced = Math.abs(totalDebit - totalCredit) < 0.01
 
-  const saveAccount = (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: string; opening: number }) => {
+  const saveAccount = (input: { code: string; name_en: string; name_ar: string; type: string; group: string; vat_box?: number; opening: number }) => {
     if (modal?.mode === 'edit') {
       setOverrides((o) => ({ ...o, [input.code]: { name_en: input.name_en, name_ar: input.name_ar, vat_box: input.vat_box } }))
     } else {
