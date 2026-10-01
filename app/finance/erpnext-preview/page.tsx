@@ -209,7 +209,7 @@ function AccountModal({
             </label>
           )}
           {error && <p className="text-xs text-red-600">{error}</p>}
-          <p className="text-xs text-slate-400">Preview only — saved for this session so you can see how it reads in the tree; it isn't written back to the ledger file.</p>
+          <p className="text-xs text-slate-400">Preview only — saved for this session so you can see how it reads in the tree; it isn&apos;t written back to the ledger file.</p>
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3.5">
           <button onClick={onClose} className="rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
@@ -283,13 +283,19 @@ function ChartOfAccounts({ onViewHistory }: { onViewHistory: (code: string) => v
     !query || code.includes(query) || name.toLowerCase().includes(query)
 
   const toggleRoot = (k: string) => setOpenRoots((s) => {
-    const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n
+    const n = new Set(s)
+    if (n.has(k)) n.delete(k); else n.add(k)
+    return n
   })
   const toggleGroup = (k: string) => setOpenGroups((s) => {
-    const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n
+    const n = new Set(s)
+    if (n.has(k)) n.delete(k); else n.add(k)
+    return n
   })
   const toggleInSet = (set: Set<string>, setFn: (s: Set<string>) => void, code: string) => {
-    const n = new Set(set); n.has(code) ? n.delete(code) : n.add(code); setFn(n)
+    const n = new Set(set)
+    if (n.has(code)) n.delete(code); else n.add(code)
+    setFn(n)
   }
 
   const totalDebit = tb.reduce((s, a) => s + a.debit, 0)
