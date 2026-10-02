@@ -548,20 +548,26 @@ function GeneralLedger({ account, onAccount }: { account: string; onAccount: (v:
 
 type JeLine = { id: number; account: string; desc: string; debit: string; credit: string }
 
-function NewJournalEntryForm({
-  nextJvNo, onCancel, onPost,
+function JournalEntryForm({
+  mode, jvNo, initial, onCancel, onSave,
 }: {
-  nextJvNo: string
+  mode: 'new' | 'edit'
+  jvNo: string
+  initial?: (typeof postings)[number]
   onCancel: () => void
-  onPost: (entry: (typeof postings)[number]) => void
+  onSave: (entry: (typeof postings)[number]) => void
 }) {
-  const [date, setDate] = useState('2026-08-15')
+  const [date, setDate] = useState(initial?.date ?? '2026-08-15')
   const [reference, setReference] = useState('')
-  const [memo, setMemo] = useState('')
-  const [lines, setLines] = useState<JeLine[]>([
-    { id: 1, account: accounts[0]?.code ?? '', desc: '', debit: '', credit: '' },
-    { id: 2, account: accounts[1]?.code ?? '', desc: '', debit: '', credit: '' },
-  ])
+  const [memo, setMemo] = useState(initial?.memo ?? '')
+  const [lines, setLines] = useState<JeLine[]>(
+    initial
+      ? initial.lines.map((l, i) => ({ id: i + 1, account: l.account, desc: l.desc, debit: l.debit ? String(l.debit) : '', credit: l.credit ? String(l.credit) : '' }))
+      : [
+          { id: 1, account: accounts[0]?.code ?? '', desc: '', debit: '', credit: '' },
+          { id: 2, account: accounts[1]?.code ?? '', desc: '', debit: '', credit: '' },
+        ],
+  )
   const [error, setError] = useState('')
 
   const updateLine = (id: number, patch: Partial<JeLine>) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)))
@@ -573,39 +579,44 @@ function NewJournalEntryForm({
   const diff = Math.round((totalDebit - totalCredit) * 100) / 100
   const balanced = diff === 0 && totalDebit > 0
 
-  const post = () => {
+  const save = () => {
     if (!memo.trim()) { setError('A narration is required so this entry is auditable later.'); return }
-    if (!balanced) { setError('Total debit and total credit must match before posting.'); return }
+    if (!balanced) { setError('Total debit and total credit must match before saving.'); return }
     const postedLines = lines
       .filter((l) => (Number(l.debit) || 0) > 0 || (Number(l.credit) || 0) > 0)
       .map((l) => {
         const acc = accounts.find((a) => a.code === l.account)
         return { account: l.account, account_name: acc?.name_en ?? l.account, job_no: null, desc: l.desc, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 }
       })
-    onPost({
-      jv_no: nextJvNo,
+    onSave({
+      jv_no: jvNo,
       date,
-      memo: reference ? `${memo} (${reference})` : memo,
-      prepared_by: 'Accounts - Amal',
-      approved_by: null,
-      source: 'Manual journal',
+      memo: mode === 'new' && reference ? `${memo} (${reference})` : memo,
+      prepared_by: initial?.prepared_by ?? 'Accounts - Amal',
+      approved_by: initial?.approved_by ?? null,
+      source: initial?.source ?? 'Manual journal',
       lines: postedLines,
     } as (typeof postings)[number])
   }
 
   return (
     <Card className="mb-6">
-      <CardHead title="New Journal Entry" sub="Standard double-entry capture — one row per ledger account touched. Debit and credit must balance before this can post." />
+      <CardHead
+        title={mode === 'new' ? 'New Journal Entry' : `Edit Journal Entry — ${jvNo}`}
+        sub="Standard double-entry capture — one row per ledger account touched. Debit and credit must balance before this can save."
+      />
       <div className="grid grid-cols-2 gap-4 px-5 py-4 sm:grid-cols-4">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-slate-500">Posting date</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
         </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-slate-500">Reference (optional)</span>
-          <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO / invoice / claim no." className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
-        </label>
-        <label className="col-span-2 block">
+        {mode === 'new' && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Reference (optional)</span>
+            <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO / invoice / claim no." className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
+          </label>
+        )}
+        <label className={`block ${mode === 'new' ? 'col-span-2' : 'col-span-3'}`}>
           <span className="mb-1 block text-xs font-medium text-slate-500">Narration</span>
           <input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="What this entry records, in plain words" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800" />
         </label>
@@ -649,7 +660,7 @@ function NewJournalEntryForm({
       <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3.5">
         <div className="text-[13px]">
           {balanced ? (
-            <span className="font-medium text-teal-700">Balanced — ready to post</span>
+            <span className="font-medium text-teal-700">Balanced — ready to save</span>
           ) : (
             <span className="font-medium text-amber-700">Out of balance by {num(Math.abs(diff), 2)} SAR</span>
           )}
@@ -657,8 +668,8 @@ function NewJournalEntryForm({
         </div>
         <div className="flex gap-2">
           <button onClick={onCancel} className="rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={post} disabled={!balanced} className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-600/40">
-            Post entry
+          <button onClick={save} disabled={!balanced} className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-600/40">
+            {mode === 'new' ? 'Post entry' : 'Save changes'}
           </button>
         </div>
       </div>
@@ -668,8 +679,11 @@ function NewJournalEntryForm({
 
 function JournalEntries({ selected, onSelect }: { selected: string | null; onSelect: (v: string) => void }) {
   const [customPostings, setCustomPostings] = useState<typeof postings>([])
-  const [showNew, setShowNew] = useState(false)
-  const allPostings = useMemo(() => [...customPostings, ...postings], [customPostings])
+  const [overrides, setOverrides] = useState<Record<string, (typeof postings)[number]>>({})
+  const [formMode, setFormMode] = useState<'none' | 'new' | 'edit'>('none')
+
+  const basePostings = useMemo(() => [...customPostings, ...postings], [customPostings])
+  const allPostings = useMemo(() => basePostings.map((p) => overrides[p.jv_no] ?? p), [basePostings, overrides])
   const sel = allPostings.find((p) => p.jv_no === selected) ?? allPostings[0]
 
   const nextJvNo = useMemo(() => {
@@ -685,8 +699,8 @@ function JournalEntries({ selected, onSelect }: { selected: string | null; onSel
           title="Journal Entries"
           sub="Every voucher posted to the ledger — sales, purchases, expense claims and manual journals alike."
           right={
-            !showNew ? (
-              <button onClick={() => setShowNew(true)} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700">
+            formMode === 'none' ? (
+              <button onClick={() => setFormMode('new')} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700">
                 <Plus className="h-3.5 w-3.5" /> New Journal Entry
               </button>
             ) : undefined
@@ -699,12 +713,12 @@ function JournalEntries({ selected, onSelect }: { selected: string | null; onSel
               <Row
                 key={p.jv_no}
                 className={`cursor-pointer ${sel?.jv_no === p.jv_no ? 'bg-teal-50/60' : ''}`}
-                onClick={() => onSelect(p.jv_no)}
+                onClick={() => { onSelect(p.jv_no); setFormMode('none') }}
               >
                 <Cell className="tabular text-xs font-medium text-teal-700">{p.jv_no}</Cell>
                 <Cell className="text-slate-500">{day(p.date)}</Cell>
                 <Cell className="text-xs text-slate-400">{p.source}</Cell>
-                <Cell className="max-w-[280px] truncate">{p.memo}</Cell>
+                <Cell className="max-w-[280px] truncate">{p.memo}{overrides[p.jv_no] && <Tag tone="amber">edited</Tag>}</Cell>
                 <Cell className="text-xs text-slate-500">{p.prepared_by}</Cell>
                 <Cell className="tabular font-medium">{sar(total, { compact: true })}</Cell>
               </Row>
@@ -713,24 +727,48 @@ function JournalEntries({ selected, onSelect }: { selected: string | null; onSel
         </Table>
       </Card>
 
-      {showNew && (
-        <NewJournalEntryForm
-          nextJvNo={nextJvNo}
-          onCancel={() => setShowNew(false)}
-          onPost={(entry) => {
+      {formMode === 'new' && (
+        <JournalEntryForm
+          mode="new"
+          jvNo={nextJvNo}
+          onCancel={() => setFormMode('none')}
+          onSave={(entry) => {
             setCustomPostings((c) => [entry, ...c])
             onSelect(entry.jv_no)
-            setShowNew(false)
+            setFormMode('none')
           }}
         />
       )}
 
-      {sel && (
+      {formMode === 'edit' && sel && (
+        <JournalEntryForm
+          mode="edit"
+          jvNo={sel.jv_no}
+          initial={sel}
+          onCancel={() => setFormMode('none')}
+          onSave={(entry) => {
+            setOverrides((o) => ({ ...o, [entry.jv_no]: entry }))
+            setFormMode('none')
+          }}
+        />
+      )}
+
+      {sel && formMode !== 'edit' && (
         <Card className="mt-6">
           <CardHead
             title={`Journal Entry — ${sel.jv_no}`}
             sub={sel.memo}
-            right={sel.approved_by ? <Tag tone="brand">approved by {sel.approved_by}</Tag> : <Tag tone="amber">pending approval</Tag>}
+            right={
+              <div className="flex items-center gap-2">
+                {sel.approved_by ? <Tag tone="brand">approved by {sel.approved_by}</Tag> : <Tag tone="amber">pending approval</Tag>}
+                <button
+                  onClick={() => setFormMode('edit')}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </button>
+              </div>
+            }
           />
           <div className="grid grid-cols-2 gap-4 px-5 py-4 sm:grid-cols-4">
             <Field label="Posting date" value={day(sel.date)} />
